@@ -2,7 +2,12 @@
  * 问题插件的数据形状：实体、记录与关联的名称、字段和纯函数。
  * 这里的名称与字段是持久化契约（随笔记库保存），改动前先确认已有数据如何处理，见 DEVELOPMENT.md。
  */
-import type { JsonValue, PluginEntityRef, PluginIndexes } from "@tau/plugins";
+import type {
+  JsonValue,
+  PluginEntityRef,
+  PluginIndexes,
+  PluginSidebarTone,
+} from "@tau/plugins";
 
 /** 实体类型：问题（标题 + 背景描述）与独立答案 */
 export const QUESTION_KIND = "question";
@@ -16,6 +21,8 @@ export const EVENTS = "events";
 export const MATERIAL_ROLE = "material";
 export const ANSWER_ROLE = "answer";
 export const CHAT_ROLE = "chat";
+/** 由问题立项出的 Notebook */
+export const NOTEBOOK_ROLE = "notebook";
 
 export const QUESTION_INDEXES: PluginIndexes = {
   status: "string",
@@ -29,7 +36,18 @@ export const GROUP_INDEXES: PluginIndexes = { sortIndex: "number", isDefault: "b
 export const EVENT_INDEXES: PluginIndexes = { questionId: "string" };
 
 export const SORT_STEP = 1024;
-export const DEFAULT_GROUP = { title: "未分类", color: "#9CA3AF" } as const;
+export const DEFAULT_GROUP = { title: "未分类", tone: "gray" } as const;
+
+/** 分组色，与侧边栏子项的色点同一套 */
+export const GROUP_TONES: readonly PluginSidebarTone[] = [
+  "rose",
+  "orange",
+  "yellow",
+  "green",
+  "blue",
+  "purple",
+  "gray",
+];
 
 export type QuestionStatus = "not_started" | "in_progress" | "resolved";
 export const QUESTION_STATUSES: readonly QuestionStatus[] = [
@@ -90,7 +108,7 @@ export interface Question extends QuestionMeta {
 export interface QuestionGroup {
   id: string;
   title: string;
-  color: string | null;
+  tone: PluginSidebarTone;
   sortIndex: number;
   isDefault: boolean;
   createdAt: number;
@@ -173,7 +191,9 @@ export function readGroup(record: {
   return {
     id: record.id,
     title: typeof data.title === "string" ? data.title : "",
-    color: typeof data.color === "string" ? data.color : null,
+    tone: GROUP_TONES.includes(data.tone as PluginSidebarTone)
+      ? (data.tone as PluginSidebarTone)
+      : "gray",
     sortIndex: typeof data.sortIndex === "number" ? data.sortIndex : 0,
     isDefault: data.isDefault === true,
     createdAt: record.createdAt,
@@ -181,10 +201,28 @@ export function readGroup(record: {
   };
 }
 
-const readRef = (value: unknown): PluginEntityRef | undefined =>
+export const readRef = (value: unknown): PluginEntityRef | undefined =>
   isRecord(value) && typeof value.kind === "string" && typeof value.id === "string"
     ? ({ kind: value.kind, id: value.id } as PluginEntityRef)
     : undefined;
+
+/** 独立答案的 meta：所属问题，以及与答案共用正文的卡片、文章、项目文档 */
+export interface AnswerMeta {
+  questionId: string;
+  projections: PluginEntityRef[];
+}
+
+export function readAnswerMeta(meta: Record<string, JsonValue>): AnswerMeta {
+  const projections = Array.isArray(meta.projections)
+    ? meta.projections.map(readRef).filter((ref): ref is PluginEntityRef => ref != null)
+    : [];
+  return { questionId: typeof meta.questionId === "string" ? meta.questionId : "", projections };
+}
+
+export const writeAnswerMeta = (meta: AnswerMeta): Record<string, JsonValue> => ({
+  questionId: meta.questionId,
+  projections: meta.projections.map(ref => ({ kind: ref.kind, id: ref.id })),
+});
 
 /** 读轨迹记录；无法识别的返回 null，页面不展示 */
 export function readEvent(record: {

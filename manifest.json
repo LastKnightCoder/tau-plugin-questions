@@ -10,5 +10,18 @@
   "apiVersion": 1,
   "platform": "desktop",
   "format": "cjs",
-  "main": "main.js"
+  "main": "main.js",
+  "permissions": [
+    "cards:read",
+    "cards:write",
+    "articles:read",
+    "articles:write",
+    "documents:read",
+    "whiteboards:read",
+    "whiteboards:write",
+    "projects:read",
+    "projects:write",
+    "materials:read",
+    "chats:read"
+  ]
 }

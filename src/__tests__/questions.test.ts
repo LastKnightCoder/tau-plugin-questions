@@ -30,7 +30,7 @@ describe("问题数据", () => {
     const [a, b] = await Promise.all([data.ensureDefaultGroup(), data.ensureDefaultGroup()]);
     expect(a.id).toBe(b.id);
     expect((await data.listGroups()).map(g => g.title)).toEqual(["未分类"]);
-    expect((await data.updateGroup(a.id, { title: "改名", color: "#000000" })).title).toBe("未分类");
+    expect((await data.updateGroup(a.id, { title: "改名", tone: "rose" })).title).toBe("未分类");
     await expect(data.deleteGroup(a.id)).rejects.toThrow("默认分组不可删除");
   });
 
@@ -51,7 +51,7 @@ describe("问题数据", () => {
   });
 
   it("快速收集按「#分组」的全名或前缀归组，找不到落默认分组", async () => {
-    const reading = await data.createGroup({ title: "Reading", color: "#3366ff" });
+    const reading = await data.createGroup({ title: "Reading", tone: "blue" });
     expect(parseCapture("为什么 #rea 会这样")).toEqual({ title: "为什么 会这样", groupHint: "rea" });
     expect((await data.captureQuestion("为什么 #rea 会这样")).group.id).toBe(reading.id);
     expect((await data.captureQuestion("C# 的泛型 #不存在")).group.title).toBe("未分类");
@@ -152,8 +152,35 @@ describe("问题数据", () => {
     expect(rows.links).toEqual([]);
   });
 
+  it("放弃空答案：撤掉「写下结论」与它带来的自动进入探究中，不记移除", async () => {
+    const question = await data.createQuestion({ title: "问题" });
+    await data.createAnswer(question.id, { title: "" });
+    expect((await data.getQuestion(question.id))!.status).toBe("in_progress");
+    const [answer] = await data.listAnswers(question.id);
+    await data.discardAnswer(question.id, answer);
+    const current = (await data.getQuestion(question.id))!;
+    expect(current).toMatchObject({ status: "not_started", composition: {} });
+    expect(await events(question.id)).toEqual(["create"]);
+    expect(await data.listAnswers(question.id)).toEqual([]);
+  });
+
+  it("答案记下共用正文的卡片；立项的 Notebook 与由此发起的对话可以读回", async () => {
+    const question = await data.createQuestion({ title: "问题" });
+    const answerId = await data.createAnswer(question.id, { title: "结论" });
+    await data.addProjection(answerId, card("9"));
+    await data.addProjection(answerId, card("9"));
+    const [answer] = await data.listAnswers(question.id);
+    expect(answer.meta).toEqual({ questionId: question.id, projections: [card("9")] });
+    await data.renameAnswer(answer, "新结论");
+    expect((await data.listAnswers(question.id))[0].entity.title).toBe("新结论");
+    await data.linkNotebook(question.id, { kind: "notebook", id: "3" });
+    expect((await data.getNotebook(question.id))?.to).toEqual({ kind: "notebook", id: "3" });
+    await data.linkChat(question.id, "s-2", { initiated: true });
+    expect((await data.listChats(question.id))[0].data).toEqual({ initiated: true });
+  });
+
   it("探究中的问题按最近活动倒序，附分组与最近一条轨迹", async () => {
-    const group = await data.createGroup({ title: "数据库", color: "#3366ff" });
+    const group = await data.createGroup({ title: "数据库", tone: "blue" });
     const older = await data.createQuestion({ title: "旧的", groupId: group.id });
     const newer = await data.createQuestion({ title: "新的" });
     await data.createQuestion({ title: "没动过" });

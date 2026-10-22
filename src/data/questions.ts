@@ -9,6 +9,7 @@ import type {
   PluginLink,
   PluginOwnEntity,
   PluginPage,
+  PluginSidebarTone,
   PluginTransaction,
 } from "@tau/plugins";
 import {
@@ -20,16 +21,20 @@ import {
   EVENTS,
   GROUPS,
   MATERIAL_ROLE,
+  NOTEBOOK_ROLE,
   matchGroup,
   parseCapture,
   QUESTION_KIND,
   QUESTION_STATUSES,
+  readAnswerMeta,
   readEvent,
   readGroup,
   readQuestionMeta,
   SORT_STEP,
+  writeAnswerMeta,
   writeEvent,
   writeQuestionMeta,
+  type AnswerMeta,
   type CompositionKind,
   type Question,
   type QuestionEvent,
@@ -56,6 +61,7 @@ export interface MaterialInput {
 export interface QuestionAnswer {
   link: PluginLink;
   entity: PluginOwnEntity;
+  meta: AnswerMeta;
 }
 
 export interface ActiveQuestion {
@@ -139,7 +145,7 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
     return readGroup(record);
   }
 
-  async function createGroup(input: { title: string; color?: string | null }) {
+  async function createGroup(input: { title: string; tone?: PluginSidebarTone }) {
     const title = requireTitle(input.title, "分组名称");
     const last = await records.query(GROUPS, {
       orderBy: { field: "sortIndex", direction: "desc" },
@@ -149,23 +155,23 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
     return readGroup(
       await records.insert(GROUPS, {
         title,
-        color: input.color ?? null,
+        tone: input.tone ?? DEFAULT_GROUP.tone,
         sortIndex,
         isDefault: false,
       })
     );
   }
 
-  async function updateGroup(id: string, patch: { title?: string; color?: string | null }) {
+  async function updateGroup(id: string, patch: { title?: string; tone?: PluginSidebarTone }) {
     const group = await requireGroup(id);
     const title =
       group.isDefault || patch.title === undefined ? group.title : requireTitle(patch.title, "分组名称");
-    const color = patch.color === undefined ? group.color : patch.color;
+    const tone = patch.tone ?? group.tone;
     return readGroup(
       await records.update(
         GROUPS,
         id,
-        { title, color, sortIndex: group.sortIndex, isDefault: group.isDefault },
+        { title, tone, sortIndex: group.sortIndex, isDefault: group.isDefault },
         { expectedRevision: group.revision }
       )
     );
@@ -201,7 +207,7 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
         for (const { group, sortIndex } of batch)
           await tx.records.update(GROUPS, group.id, {
             title: group.title,
-            color: group.color,
+            tone: group.tone,
             sortIndex,
             isDefault: group.isDefault,
           });
@@ -499,11 +505,14 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
     return links.list(questionId, { role: CHAT_ROLE });
   }
 
-  /** 关联对话；messageIds 记下问题从哪几条消息转来。已关联的返回 false，不覆盖原来的消息位置 */
+  /**
+   * 关联对话；messageIds 记下问题从哪几条消息转来，initiated 表示对话由这个问题发起。
+   * 已关联的返回 false，不覆盖原来记下的信息。
+   */
   async function linkChat(
     questionId: string,
     sessionId: string,
-    options: { messageIds?: readonly string[]; title?: string } = {}
+    options: { messageIds?: readonly string[]; title?: string; initiated?: boolean } = {}
   ) {
     const question = await requireQuestion(questionId);
     const ref: PluginEntityRef = { kind: "chat-session", id: sessionId };
@@ -511,7 +520,10 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
     await transaction(async tx => {
       await tx.links.add(questionId, ref, {
         role: CHAT_ROLE,
-        ...(options.messageIds?.length ? { data: { messageIds: [...options.messageIds] } } : {}),
+        data: {
+          ...(options.messageIds?.length ? { messageIds: [...options.messageIds] } : {}),
+          ...(options.initiated ? { initiated: true } : {}),
+        },
       });
       await attach(tx, question, [
         {
@@ -535,7 +547,7 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
     const answers = await Promise.all(
       answerLinks.map(async link => {
         const entity = link.to.kind === "plugin-entity" ? await entities.get(link.to.id) : null;
-        return entity?.kind === ANSWER_KIND ? { link, entity } : null;
+        return entity?.kind === ANSWER_KIND ? { link, entity, meta: readAnswerMeta(entity.meta) } : null;
       })
     );
     return answers.filter((answer): answer is QuestionAnswer => answer != null);
@@ -552,7 +564,7 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
         kind: ANSWER_KIND,
         key: newKey(),
         title: input.title.trim(),
-        meta: { questionId },
+        meta: writeAnswerMeta({ questionId, projections: [] }),
         ...(input.content ? { content: input.content } : {}),
       });
       const ref: PluginEntityRef = { kind: "plugin-entity", id };
@@ -587,6 +599,68 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
         ...(answer.entity.title ? { title: answer.entity.title } : {}),
       });
     });
+  }
+
+  /**
+   * 写到一半放弃的空答案：连同那条「写下结论」一起撤掉，不记移除；
+   * 它让问题自动进入探究中时，一并退回待探究。
+   */
+  async function discardAnswer(questionId: string, answer: QuestionAnswer) {
+    const question = await requireQuestion(questionId);
+    const events = await listEvents(questionId);
+    const index = events.findIndex(
+      event =>
+        event.type === "link" &&
+        event.ref?.kind === answer.link.to.kind &&
+        event.ref.id === answer.link.to.id
+    );
+    const next = events[index + 1];
+    const autoStart =
+      index >= 0 && next?.type === "status" && next.auto === true && question.status === "in_progress"
+        ? next
+        : null;
+    await transaction(async tx => {
+      await tx.links.remove(answer.link.id);
+      await tx.entities.delete(answer.entity.id);
+      if (index >= 0) await tx.records.delete(EVENTS, events[index].id);
+      if (autoStart) await tx.records.delete(EVENTS, autoStart.id);
+      await tx.entities.update(question.id, {
+        meta: writeQuestionMeta({
+          ...question,
+          composition: count(question.composition, "answer", -1),
+          ...(autoStart ? { status: "not_started" as const } : {}),
+        }),
+      });
+    });
+  }
+
+  /** 答案的标题取正文开头，随编辑更新 */
+  async function renameAnswer(answer: QuestionAnswer, title: string) {
+    if (answer.entity.title === title) return;
+    await entities.update(answer.entity.id, { title }, { expectedRevision: answer.entity.revision });
+  }
+
+  /** 记下与答案共用正文的卡片、文章或项目文档 */
+  async function addProjection(answerId: string, ref: PluginEntityRef) {
+    const entity = await entities.get(answerId);
+    if (entity?.kind !== ANSWER_KIND) throw new Error("答案不存在");
+    const meta = readAnswerMeta(entity.meta);
+    if (meta.projections.some(item => sameRef(item, ref))) return;
+    await entities.update(
+      answerId,
+      { meta: writeAnswerMeta({ ...meta, projections: [...meta.projections, ref] }) },
+      { expectedRevision: entity.revision }
+    );
+  }
+
+  /* ── 立项 ── */
+
+  async function getNotebook(questionId: string): Promise<PluginLink | null> {
+    return (await links.list(questionId, { role: NOTEBOOK_ROLE }))[0] ?? null;
+  }
+
+  async function linkNotebook(questionId: string, ref: PluginEntityRef) {
+    await links.add(questionId, ref, { role: NOTEBOOK_ROLE });
   }
 
   /* ── 轨迹 ── */
@@ -643,6 +717,11 @@ export function createQuestionData(store: QuestionStore, now: () => number = Dat
     listAnswers,
     createAnswer,
     deleteAnswer,
+    discardAnswer,
+    renameAnswer,
+    addProjection,
+    getNotebook,
+    linkNotebook,
     listEvents,
     addNote,
     deleteEvent,

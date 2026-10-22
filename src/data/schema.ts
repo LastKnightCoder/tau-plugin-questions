@@ -31,7 +31,9 @@ export function registerQuestionSchema(
     open: {
       page: options.page,
       params: (entity): Record<string, string> =>
-        typeof entity.meta.questionId === "string" ? { selectedId: entity.meta.questionId } : {},
+        typeof entity.meta.questionId === "string"
+          ? { selectedId: entity.meta.questionId, answer: entity.id }
+          : {},
     },
     indexes: ANSWER_INDEXES,
   });
