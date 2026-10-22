@@ -32,4 +32,4 @@ pnpm install:local
 
 `composition` 与 `activityAt` 由每次写操作在同一个 transaction 里维护，列表与首页据此显示，不必逐个读取关联。
 
-Tau 早期内置的问题管理由宿主一次性迁移到上述形状（问题与答案的 key 取 `legacy-<旧 ID>`）；修改这里的字段时，同步宿主的迁移代码。
+Tau 早期内置的问题管理由宿主一次性迁移到上述形状（宿主 `question-plugin-migration.ts`）：问题与答案的 key 取 `legacy-<旧 ID>`（答案为原正文 ID），分组、轨迹记录与关联的 ID 以 `legacy-` 开头；插件激活时已建的默认分组沿用。迁移在插件启用并激活之后执行，迁入后经实体与记录事件刷新页面。修改这里的字段时，同步宿主的迁移代码。
