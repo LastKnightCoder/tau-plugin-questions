@@ -4,7 +4,11 @@
  */
 import { createContext, useContext, type ReactNode } from "react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { PluginContext, PluginEventType, PluginPageHandle } from "@tau/plugins";
+import type {
+  PluginContext,
+  PluginEventType,
+  PluginPageHandle,
+} from "@tau/plugins";
 import { createQuestionData, type QuestionData } from "./data/questions";
 
 /** 问题数据的查询键前缀 */
@@ -21,7 +25,8 @@ const OWN_EVENTS: PluginEventType[] = [
   "record.deleted",
   "workspace.reset",
 ];
-const REF_EVENTS: PluginEventType[] = [
+/** 关联内容的变化；订阅的每类事件都要在 manifest 声明对应的读取权限，Notebook 只显示 describe 的标题，不订阅 */
+export const REF_EVENTS: PluginEventType[] = [
   "card.updated",
   "card.deleted",
   "article.updated",
@@ -32,8 +37,6 @@ const REF_EVENTS: PluginEventType[] = [
   "whiteboard.deleted",
   "project.updated",
   "project.deleted",
-  "notebook.updated",
-  "notebook.deleted",
   "material.updated",
   "material.deleted",
   "chat.updated",
@@ -72,7 +75,9 @@ export function RuntimeProvider({
 }) {
   return (
     <RuntimeContext.Provider value={runtime}>
-      <QueryClientProvider client={runtime.queryClient}>{children}</QueryClientProvider>
+      <QueryClientProvider client={runtime.queryClient}>
+        {children}
+      </QueryClientProvider>
     </RuntimeContext.Provider>
   );
 }
