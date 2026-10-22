@@ -1,0 +1,34 @@
+# 开发说明
+
+```bash
+pnpm install
+pnpm test
+pnpm build
+pnpm install:local
+```
+
+`pnpm build` 先做类型检查，再打包 `dist/tau.questions-<版本>.zip`。
+
+## SDK
+
+依赖 `@xiongtao.xt/tau-plugins@0.34.0` 与 `@xiongtao.xt/tau-ui@0.3.0`（经 npm 别名安装为 `@tau/plugins`、`@tau/ui`），运行时由 Tau 提供。SDK 0.34.0 发布前使用 `vendor/` 下的本地归档，发布后改为公开包并删除 `vendor/`。
+
+测试里 `@tau/plugins` 的运行时由 `src/__tests__/sdk-mock.ts` 替代，数据层用 `src/__tests__/memory-store.ts` 的内存实现（按 SDK 文档的筛选、排序、revision 与事务语义）。
+
+## 数据
+
+名称与字段随笔记库保存，改动前要考虑已有数据。定义在 `src/data/model.ts`。
+
+| 数据 | 承载 | 字段 |
+| --- | --- | --- |
+| 问题 | 实体 `question`，正文为背景描述 | 标题；meta：`status`（`not_started` / `in_progress` / `resolved`）、`groupId`（分组记录 ID）、`sortIndex`、`resolvedTime`、`activityAt`（最近活动）、`composition`（各类材料数） |
+| 独立答案 | 实体 `answer`，正文为答案 | 标题；meta：`questionId` |
+| 分组 | 记录集合 `groups` | `title`、`color`、`sortIndex`、`isDefault`（「未分类」，不可改名、不可删除） |
+| 轨迹 | 记录集合 `events`，按创建时间排序 | `questionId`、`type`（`create` / `status` / `link` / `unlink` / `note`）及各类型字段 |
+| 材料 | 关联，角色 `material` | 目标为卡片、文章、项目文档、项目、白板或外部材料 |
+| 对话 | 关联，角色 `chat` | 目标为对话；`data.messageIds` 记下问题从哪几条消息转来 |
+| 答案 | 关联，角色 `answer` | 目标为本插件的 `answer` 实体 |
+
+`composition` 与 `activityAt` 由每次写操作在同一个 transaction 里维护，列表与首页据此显示，不必逐个读取关联。
+
+Tau 早期内置的问题管理由宿主一次性迁移到上述形状（问题与答案的 key 取 `legacy-<旧 ID>`）；修改这里的字段时，同步宿主的迁移代码。

@@ -1,0 +1,37 @@
+{
+  "name": "tau-plugin-questions",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "packageManager": "pnpm@11.9.0",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "check": "tsc --noEmit",
+    "test": "vitest run",
+    "build": "pnpm check && node build.mjs",
+    "install:local": "node install-local.mjs"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "5.90.16",
+    "@tau/plugins": "file:vendor/xiongtao.xt-tau-plugins-0.34.0.tgz",
+    "@tau/ui": "npm:@xiongtao.xt/tau-ui@0.3.0",
+    "lucide-react": "0.563.0",
+    "react": "19.2.0",
+    "react-dom": "19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.0",
+    "@types/react-dom": "19.2.0",
+    "adm-zip": "0.5.16",
+    "esbuild": "0.25.12",
+    "typescript": "5.8.3",
+    "vitest": "3.2.4"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/LastKnightCoder/tau-plugin-questions.git"
+  }
+}
