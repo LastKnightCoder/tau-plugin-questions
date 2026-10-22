@@ -8,5 +8,10 @@ vi.mock("@tau/plugins", () => {
       super(message);
     }
   }
-  return { PluginConflictError, definePlugin: (definition: unknown) => definition };
+  const SIDEBAR_GROUPS = { daily: "daily", knowledge: "knowledge", learning: "learning" };
+  return {
+    PluginConflictError,
+    SIDEBAR_GROUPS,
+    definePlugin: (definition: unknown) => definition,
+  };
 });

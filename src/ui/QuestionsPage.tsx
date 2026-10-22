@@ -1,7 +1,8 @@
 /**
  * 问题页：一整张纸，纸顶是标题、状态计数与快速收集，纸内三段列表占满宽度；
  * 点问题在右侧打开非模态详情抽屉，再点同一行或 Esc 关闭。
- * 参数：groupId 按分组筛选（侧栏子项）；selectedId 定位到问题，answer 同时打开它的独立答案。
+ * 参数：groupId 按分组筛选（侧栏子项）；selectedId 定位到问题，answer 同时打开它的独立答案；
+ * createGroup / editGroup 打开分组弹窗（侧栏的新建与编辑分组），关闭后从参数里去掉。
  *
  * 删除问题、解除关联、删除答案不二次确认：立即隐藏并给撤销提示，提示关闭后落库；改状态可撤销。
  * 键盘（本页显示、焦点不在输入框与浮层内）：↑↓ 切换、1/2/3 设状态、L 关联材料。
@@ -15,11 +16,19 @@ import { ANSWER_ROLE, CHAT_ROLE, type Question, type QuestionStatus } from "../d
 import { questionActions } from "./actions";
 import { AnswerDialog, type AnswerDialogState } from "./AnswerDialog";
 import { CaptureBar } from "./CaptureBar";
+import { GroupDialog } from "./GroupDialog";
 import { GroupDot, KeyHint, MENU_ICON, StatusRing } from "./bits";
 import { MaterialPreview, type MaterialPreviewState } from "./MaterialPreview";
 import { QuestionDrawer } from "./QuestionDrawer";
 import { QuestionList } from "./QuestionList";
-import { SECTION_ORDER, STATUS_META, STATUS_STEPS, sectionize, statusCounts } from "./model";
+import {
+  QUESTION_DRAG,
+  SECTION_ORDER,
+  STATUS_META,
+  STATUS_STEPS,
+  sectionize,
+  statusCounts,
+} from "./model";
 import {
   detailKey,
   loadQuestionDetail,
@@ -28,9 +37,6 @@ import {
   type QuestionDetail,
 } from "./queries";
 import { useDeferredActions } from "./useDeferredActions";
-
-/** 列表行拖到侧栏分组上移动问题 */
-export const QUESTION_DRAG = "question";
 
 const param = (value: unknown) => (typeof value === "string" && value ? value : null);
 
@@ -54,6 +60,16 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
   const [answerDialog, setAnswerDialog] = useState<AnswerDialogState | null>(null);
   const [preview, setPreview] = useState<MaterialPreviewState | null>(null);
   const captureRef = useRef<HTMLInputElement>(null);
+  const editGroupId = param(params.editGroup);
+  const groupDialogOpen = params.createGroup === true || editGroupId != null;
+  const editingGroup = editGroupId ? (snapshot?.groups.find(g => g.id === editGroupId) ?? null) : null;
+  /* 新建分组后转到新分组，否则回到原来的筛选 */
+  const createdGroup = useRef<string | null>(null);
+  const closeGroupDialog = () => {
+    const groupId = createdGroup.current ?? groupFilter;
+    createdGroup.current = null;
+    void runtime.pages.questions?.open(groupId ? { groupId } : {});
+  };
 
   const detailQuery = useQuestionDetail(selectedId);
   const detail = detailQuery.data?.question.id === selectedId ? detailQuery.data : null;
@@ -456,6 +472,23 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
         </div>
       </div>
 
+      <GroupDialog
+        open={groupDialogOpen && (editGroupId == null || editingGroup != null)}
+        group={editingGroup}
+        onClose={() => closeGroupDialog()}
+        onSubmit={async (title, tone) => {
+          if (editingGroup) {
+            await data.updateGroup(editingGroup.id, { title, tone });
+            await actions.refresh();
+            toast.success("分组已更新");
+          } else {
+            const created = await data.createGroup({ title, tone });
+            await actions.refresh();
+            createdGroup.current = created.id;
+            toast.success(`已创建分组「${title}」`);
+          }
+        }}
+      />
       <MaterialPreview
         state={preview}
         onClose={() => setPreview(null)}

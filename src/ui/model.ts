@@ -19,6 +19,9 @@ import type { CompositionKind, Question, QuestionEvent, QuestionStatus } from ".
 
 export const DAY_MS = 86_400_000;
 
+/** 列表行拖到侧边栏分组上移动问题（context.sidebar.dragType 的局部 ID） */
+export const QUESTION_DRAG = "question";
+
 export const STATUS_META: Record<QuestionStatus, { label: string; hint: string }> = {
   in_progress: { label: "探究中", hint: "正在积累材料" },
   not_started: { label: "待探究", hint: "收集来还没动" },
