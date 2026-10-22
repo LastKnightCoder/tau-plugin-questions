@@ -11,7 +11,7 @@ pnpm install:local
 
 ## SDK
 
-依赖 `@xiongtao.xt/tau-plugins@0.35.0` 与 `@xiongtao.xt/tau-ui@0.3.0`（经 npm 别名安装为 `@tau/plugins`、`@tau/ui`），运行时由 Tau 提供。答案与卡片、文章、项目文档共用正文（正文输入 `shareOf`）从 SDK 0.35.0 起提供；0.35.0 发布前使用 `vendor/` 下由 Tau 主仓库打出的开发归档，发布后改为公开包并删除 `vendor/`。
+依赖 `@xiongtao.xt/tau-plugins@0.35.0` 与 `@xiongtao.xt/tau-ui@0.3.0`（经 npm 别名安装为 `@tau/plugins`、`@tau/ui`），运行时由 Tau 提供。答案与卡片、文章、项目文档共用正文（正文输入 `shareOf`）从 SDK 0.35.0 起提供。
 
 测试里 `@tau/plugins` 的运行时由 `src/__tests__/sdk-mock.ts` 替代，数据层用 `src/__tests__/memory-store.ts` 的内存实现（按 SDK 文档的筛选、排序、revision 与事务语义）。
 
