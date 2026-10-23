@@ -1,6 +1,6 @@
 {
   "name": "tau-plugin-questions",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "private": true,
   "type": "module",
   "license": "MIT",
@@ -16,8 +16,8 @@
   },
   "dependencies": {
     "@tanstack/react-query": "5.90.16",
-    "@tau/plugins": "npm:@xiongtao.xt/tau-plugins@0.35.0",
-    "@tau/ui": "npm:@xiongtao.xt/tau-ui@0.3.0",
+    "@tau/plugins": "npm:@xiongtao.xt/tau-plugins@0.36.0",
+    "@tau/ui": "npm:@xiongtao.xt/tau-ui@0.4.0",
     "lucide-react": "0.563.0",
     "react": "19.2.0",
     "react-dom": "19.2.0"

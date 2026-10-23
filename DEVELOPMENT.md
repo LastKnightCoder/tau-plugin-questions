@@ -1,5 +1,7 @@
 # 开发说明
 
+当前依赖、平台边界与验证步骤见 [兼容性说明](COMPATIBILITY.md)。
+
 ```bash
 pnpm install
 pnpm test
