@@ -1,3 +1,4 @@
+import { buildPortablePluginManifest, PORTABLE_SHARED_MODULES } from "@tau/plugins/portable";
 import { build } from "esbuild";
 import { compile } from "@tailwindcss/node";
 import { Scanner } from "@tailwindcss/oxide";
@@ -18,27 +19,7 @@ import { randomUUID, createHash } from "node:crypto";
 import { isBuiltin } from "node:module";
 
 const manifest = JSON.parse(await readFile("manifest.json", "utf8"));
-if (!/^[a-z0-9]+(?:[.-][a-z0-9]+)+$/.test(manifest.id))
-  throw new Error("插件 ID 应为小写字母、数字及点或连字符组成的命名空间");
-if (!/^\d+\.\d+\.\d+(?:-[a-zA-Z0-9.-]+)?$/.test(manifest.version))
-  throw new Error("插件版本无效");
-// manifest 不写 main 时构建独立 Skill 包：没有代码入口，只打包 skills/ 目录
-const skillPackage = manifest.main === undefined;
-let backend;
-let validateManifest;
-if (skillPackage) {
-  if (manifest.backend !== undefined || manifest.formatVersion !== 1)
-    throw new Error("Skill 包使用格式 1，不能声明后台");
-} else if (manifest.backend !== undefined) {
-  const api = await import("@tau/plugins/package");
-  backend = api.validateBackendManifest(manifest.backend);
-  validateManifest = api.validatePluginManifest;
-  if (manifest.formatVersion !== 2 || backend.entry !== "backend.js")
-    throw new Error("后台模板使用格式 2 和 backend.js 入口");
-} else if (manifest.formatVersion !== 1) {
-  throw new Error("普通插件使用格式 1");
-}
-/** skills/<id>/ 下每个目录是一个 Skill：必须有带 description 的 SKILL.md，全部文件原样打包。 */
+if (!manifest.targets) throw new Error("插件只接受格式 3 作者清单");
 async function collectSkills(staging) {
   let folders;
   try {
@@ -94,17 +75,7 @@ async function collectSkills(staging) {
   return { ids, files };
 }
 
-const shared = [
-  "@tau/plugins",
-  "@tau/plugins/whiteboard",
-  "@tau/plugins/sync",
-  "@tau/ui",
-  "react",
-  "react-dom",
-  "react-dom/client",
-  "react/jsx-runtime",
-  "react/jsx-dev-runtime",
-];
+const shared = [...PORTABLE_SHARED_MODULES];
 await mkdir("dist", { recursive: true });
 const staging = await mkdtemp(path.resolve("dist/.building-"));
 const buildId = randomUUID();
@@ -127,11 +98,7 @@ try {
     }
   }
   const skills = await collectSkills(staging);
-  if (skillPackage && !skills.ids.length)
-    throw new Error("Skill 包至少需要一个 skills/<id>/SKILL.md");
-  const result = skillPackage
-    ? undefined
-    : await build({
+  const result = await build({
         entryPoints: ["src/index.tsx"],
         outfile: path.join(staging, "main.js"),
         bundle: true,
@@ -189,46 +156,20 @@ try {
     );
   await writeFile(path.join(staging, "main.css"), bundledCss + utilities);
   const styles = true;
-  if (backend) {
-    const result = await build({
-      entryPoints: ["src/backend.ts"],
-      outfile: path.join(staging, backend.entry),
-      bundle: true,
-      platform: "node",
-      format: "cjs",
-      target: "es2022",
-      external: ["@tau/plugins/backend"],
-      metafile: true,
-    });
-    for (const output of Object.values(result.metafile.outputs))
-      for (const dependency of output.imports)
-        if (
-          dependency.external &&
-          dependency.path !== "@tau/plugins/backend" &&
-          !isBuiltin(dependency.path)
-        )
-          throw new Error(`后台包含未打包依赖：${dependency.path}`);
-  }
   const integrity = {};
   for (const file of [
-    ...(skillPackage ? [] : ["main.js"]),
+    "main.js",
     ...(styles ? ["main.css"] : []),
-    ...(backend ? [backend.entry] : []),
     ...skills.files,
   ])
     integrity[file] = createHash("sha256")
       .update(await readFile(path.join(staging, file)))
       .digest("hex");
-  // skills 由 skills/ 目录生成，忽略 manifest 中手写的值
-  const packaged = {
-    ...manifest,
-    integrity,
+  const packaged = buildPortablePluginManifest(manifest, {
+    main: "main.js", integrity,
     ...(styles ? { styles: "main.css" } : {}),
-  };
-  delete packaged.skills;
-  if (skills.ids.length) packaged.skills = skills.ids;
-
-  if (validateManifest) validateManifest(packaged, { strict: true });
+    ...(skills.ids.length ? { skills: skills.ids } : {}),
+  });
   await writeFile(
     path.join(staging, "manifest.json"),
     JSON.stringify(packaged, null, 2),
@@ -253,7 +194,7 @@ try {
   );
   zip.writeZip(archive);
   console.log(
-    `构建完成：${archive}\n运行 pnpm install:local 安装到 Tau，然后在插件页点「重新扫描」。`,
+    `构建完成：${archive}`,
   );
 } catch (error) {
   await rm(staging, { recursive: true, force: true });
