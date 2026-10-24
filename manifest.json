@@ -2,15 +2,8 @@
   "id": "tau.questions",
   "name": "问题管理",
   "description": "把读书、写作和对话里冒出来的疑问记下来，挂上卡片、文章、划线等材料慢慢探究，直到写下答案。",
-  "categories": [
-    "page"
-  ],
-  "keywords": [
-    "问题",
-    "疑问",
-    "探究",
-    "学习"
-  ],
+  "categories": ["page"],
+  "keywords": ["问题", "疑问", "探究", "学习"],
   "permissions": [
     "cards:read",
     "cards:write",
@@ -24,10 +17,10 @@
     "materials:read",
     "chats:read"
   ],
-  "version": "0.1.3",
+  "version": "0.1.4",
   "targets": {
     "desktop": {
-      "minAppVersion": "0.59.2"
+      "minAppVersion": "0.59.4"
     }
   }
 }
