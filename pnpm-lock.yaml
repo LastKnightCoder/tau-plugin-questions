@@ -12,11 +12,11 @@ importers:
         specifier: 5.90.16
         version: 5.90.16(react@19.2.0)
       '@tau/plugins':
-        specifier: npm:@xiongtao.xt/tau-plugins@0.42.0
-        version: '@xiongtao.xt/tau-plugins@0.42.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(slate-dom@0.147.0(slate@0.126.2))'
+        specifier: npm:@xiongtao.xt/tau-plugins@0.62.0
+        version: '@xiongtao.xt/tau-plugins@0.62.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(slate-dom@0.147.0(slate@0.126.2))'
       '@tau/ui':
-        specifier: npm:@xiongtao.xt/tau-ui@0.5.0
-        version: '@xiongtao.xt/tau-ui@0.5.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)'
+        specifier: npm:@xiongtao.xt/tau-ui@0.6.0
+        version: '@xiongtao.xt/tau-ui@0.6.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)'
       lucide-react:
         specifier: 0.563.0
         version: 0.563.0(react@19.2.0)
@@ -713,16 +713,14 @@ packages:
   '@vitest/utils@3.2.4':
     resolution: {integrity: sha512-fB2V0JFrQSMsCo9HiSq3Ezpdv4iYaXRG1Sx8edX3MwxfyNn83mKiGzOcH+Fkxt4MHxr3y42fQi1oeAInqgX2QA==}
 
-  '@xiongtao.xt/tau-plugins@0.42.0':
-    resolution: {integrity: sha512-lXeKtCAKh29FWin5+Z9LgEYQ3+DhoYm1t7Ri83hPK1xpm44QvbUOe7uJQ2lBVuB9B3NlSMsxcSZl4Jcg86zyEw==}
-    version: 0.42.0
+  '@xiongtao.xt/tau-plugins@0.62.0':
+    resolution: {integrity: sha512-NXHxoW9B3hIYlpcVxqNO6s7rTqYf8FDc6wkHMobr88EV9SKgUe8V20oRqucgtlHPo8pSr9Xb7fcrp0+3as1BwA==}
     peerDependencies:
       react: 19.2.0
       react-dom: 19.2.0
 
-  '@xiongtao.xt/tau-ui@0.5.0':
-    resolution: {integrity: sha512-+RLVU7tXT1hg3IyQA92h5iWvv57NoF4A/eNtsy2i+DICnanm7UicISoaIY6x6nqGB9Gid23MdlLvSaQbLjSyjQ==}
-    version: 0.5.0
+  '@xiongtao.xt/tau-ui@0.6.0':
+    resolution: {integrity: sha512-SSgCI7bWcnjWtW/r5ckHauFHxWo0pYffMQ0SBaxdyF9JTjXLbN7HREjYsi1SGmBwpiPAXR/OgG/sn+lcfo93Qw==}
     peerDependencies:
       react: 19.2.0
       react-dom: 19.2.0
@@ -930,6 +928,9 @@ packages:
   is-potential-custom-element-name@1.0.1:
     resolution: {integrity: sha512-bCYeRA2rVibKZd+s2625gGnGF/t7DSqDs4dP7CrLA1m7jKWz6pps0LpYLJN8Q64HtmPKJ1hrN3nzPNKFEKOUiQ==}
 
+  isomorphic.js@0.2.5:
+    resolution: {integrity: sha512-PIeMbHqMt4DnUP3MA/Flc0HElYjMXArsw1qwJZcm9sqR8mq3l8NYizFMty0pWwE/tzIGH3EKK5+jes5mAr85yw==}
+
   jiti@2.7.0:
     resolution: {integrity: sha512-AC/7JofJvZGrrneWNaEnJeOLUx+JlGt7tNa0wZiRPT4MY1wmfKjt2+6O2p2uz2+skll8OZZmJMNqeke7kKbNgQ==}
     hasBin: true
@@ -945,6 +946,11 @@ packages:
     peerDependenciesMeta:
       canvas:
         optional: true
+
+  lib0@0.2.120:
+    resolution: {integrity: sha512-/a2eRImR8sZbmMVKe2we1/KukDQkuPyPf8yol6epvCu2PH6hurjcRI3mdGFFAi0uGoRJGyns99JquZgxwW1tQg==}
+    engines: {node: '>=16'}
+    hasBin: true
 
   lightningcss-android-arm64@1.30.2:
     resolution: {integrity: sha512-BH9sEdOCahSgmkVhBLeU7Hc9DWeZ1Eb6wNS6Da8igvUwAe0sqROHddIlvU06q3WyXVEOYDZ6ykBZQnjTbmo4+A==}
@@ -1033,11 +1039,6 @@ packages:
     resolution: {integrity: sha512-UyTNa3djBISdzL2UktgCrESXexQXaDQWi/WsDkbw6fBFfHlapajR58WoR+gxQ4laxfEyiHmoFrEIM3V+5XOVQg==}
     peerDependencies:
       react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0
-
-  lucide-react@0.468.0:
-    resolution: {integrity: sha512-6koYRhnM2N0GGZIdXzSeiNwguv1gt/FAjZOiPl76roBi3xKEXa4WmfpxgQwTTL4KipXjefrnf3oV4IsYhi4JFA==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
 
   lucide-react@0.563.0:
     resolution: {integrity: sha512-8dXPB2GI4dI8jV4MgUDGBeLdGk8ekfqVZ0BdLcrRzocGgG75ltNEmWS+gE7uokKF/0oSUuczNDT+g9hFJ23FkA==}
@@ -1229,6 +1230,11 @@ packages:
   url-parse@1.5.10:
     resolution: {integrity: sha512-WypcfiRhfeUP9vvF0j6rw0J3hrWrw6iZv3+22h6iRMJ/8z1Tj6XfLP4DsUix5MhMPnXpiHDoKyoZ/bdCkwBCiQ==}
 
+  use-sync-external-store@1.7.0:
+    resolution: {integrity: sha512-6L+EeigHMQhdaIPNIFUKwfWJSwWFQ8gJbJ2DLOs5sDIegTwR9fRxvnM3uciHKjIZhFz+KAv2emhWMRvDmMcY8A==}
+    peerDependencies:
+      react: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
+
   vite-node@3.2.4:
     resolution: {integrity: sha512-EbKSKh+bh1E1IFxeO0pg1n4dvoOTt0UDiXMd/qn++r98+jPO1xtJilvXldeuQ8giIB5IkpjCgMleHMNEsGH6pg==}
     engines: {node: ^18.0.0 || ^20.0.0 || >=22.0.0}
@@ -1346,6 +1352,25 @@ packages:
 
   xmlchars@2.2.0:
     resolution: {integrity: sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw==}
+
+  yjs@13.6.32:
+    resolution: {integrity: sha512-lfiJIIC4Xayt5ItynE407ehlE03pCjeOc4hkR4yxxvvNJ4kuiN25B0g+Qp8XagYz361LLL7DCzR5bvFJ81QKtQ==}
+    engines: {node: '>=16.0.0', npm: '>=8.0.0'}
+
+  zustand@4.5.7:
+    resolution: {integrity: sha512-CHOUy7mu3lbD6o6LJLfllpjkzhHXSBlX8B9+qPddUsIfeF5S/UZ5q0kmCsnRqT1UHFQZchNFDDzMbQsuesHWlw==}
+    engines: {node: '>=12.7.0'}
+    peerDependencies:
+      '@types/react': '>=16.8'
+      immer: '>=9.0.6'
+      react: '>=16.8'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
 
 snapshots:
 
@@ -1763,21 +1788,24 @@ snapshots:
       loupe: 3.2.1
       tinyrainbow: 2.0.0
 
-  '@xiongtao.xt/tau-plugins@0.42.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(slate-dom@0.147.0(slate@0.126.2))':
+  '@xiongtao.xt/tau-plugins@0.62.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(slate-dom@0.147.0(slate@0.126.2))':
     dependencies:
       '@types/react': 19.2.0
       '@types/react-dom': 19.2.0(@types/react@19.2.0)
       clsx: 2.1.1
-      lucide-react: 0.468.0(react@19.2.0)
+      lucide-react: 0.399.0(react@19.2.0)
       react: 19.2.0
       react-dom: 19.2.0(react@19.2.0)
       slate: 0.126.2
       slate-history: 0.113.1(slate@0.126.2)
       slate-react: 0.126.4(react-dom@19.2.0(react@19.2.0))(react@19.2.0)(slate-dom@0.147.0(slate@0.126.2))(slate@0.126.2)
+      yjs: 13.6.32
+      zustand: 4.5.7(@types/react@19.2.0)(react@19.2.0)
     transitivePeerDependencies:
+      - immer
       - slate-dom
 
-  '@xiongtao.xt/tau-ui@0.5.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
+  '@xiongtao.xt/tau-ui@0.6.0(react-dom@19.2.0(react@19.2.0))(react@19.2.0)':
     dependencies:
       '@types/react': 19.2.0
       '@types/react-dom': 19.2.0(@types/react@19.2.0)
@@ -2016,6 +2044,8 @@ snapshots:
 
   is-potential-custom-element-name@1.0.1: {}
 
+  isomorphic.js@0.2.5: {}
+
   jiti@2.7.0: {}
 
   js-tokens@9.0.1: {}
@@ -2047,6 +2077,10 @@ snapshots:
       - bufferutil
       - supports-color
       - utf-8-validate
+
+  lib0@0.2.120:
+    dependencies:
+      isomorphic.js: 0.2.5
 
   lightningcss-android-arm64@1.30.2:
     optional: true
@@ -2104,10 +2138,6 @@ snapshots:
   lru-cache@10.4.3: {}
 
   lucide-react@0.399.0(react@19.2.0):
-    dependencies:
-      react: 19.2.0
-
-  lucide-react@0.468.0(react@19.2.0):
     dependencies:
       react: 19.2.0
 
@@ -2302,6 +2332,10 @@ snapshots:
       querystringify: 2.2.0
       requires-port: 1.0.0
 
+  use-sync-external-store@1.7.0(react@19.2.0):
+    dependencies:
+      react: 19.2.0
+
   vite-node@3.2.4(jiti@2.7.0)(lightningcss@1.30.2):
     dependencies:
       cac: 6.7.14
@@ -2404,3 +2438,14 @@ snapshots:
   xml-name-validator@5.0.0: {}
 
   xmlchars@2.2.0: {}
+
+  yjs@13.6.32:
+    dependencies:
+      lib0: 0.2.120
+
+  zustand@4.5.7(@types/react@19.2.0)(react@19.2.0):
+    dependencies:
+      use-sync-external-store: 1.7.0(react@19.2.0)
+    optionalDependencies:
+      '@types/react': 19.2.0
+      react: 19.2.0
