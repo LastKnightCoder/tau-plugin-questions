@@ -4,10 +4,12 @@
  */
 import { useEffect, useRef, type ReactNode } from "react";
 import { ChevronDown, MoreHorizontal } from "lucide-react";
+import { useI18n } from "@tau/plugins";
 import { ContextMenu, IconButton, Menu } from "@tau/ui";
+import { messages } from "../i18n";
 import type { Question, QuestionGroup, QuestionStatus } from "../data/model";
 import { Composition, GroupDot, StatusRing } from "./bits";
-import { STATUS_META, cx, relativeDay, type QuestionSection } from "./model";
+import { cx, relativeDay, statusHint, statusLabel, type QuestionSection } from "./model";
 
 export function QuestionList({
   sections,
@@ -37,6 +39,7 @@ export function QuestionList({
   rowProps?(question: Question): Record<string, unknown>;
   empty: ReactNode;
 }) {
+  const { t } = useI18n(messages);
   const listRef = useRef<HTMLDivElement>(null);
 
   /* 键盘切换选中后滚入视野 */
@@ -51,7 +54,7 @@ export function QuestionList({
     <div
       ref={listRef}
       role="listbox"
-      aria-label="问题"
+      aria-label={t("page.title")}
       className="qs:-mr-1.5 qs:mt-2 qs:min-h-0 qs:flex-1 qs:overflow-y-auto qs:pb-2 qs:pr-1.5"
     >
       {sections.length === 0
@@ -73,12 +76,12 @@ export function QuestionList({
                     )}
                     strokeWidth={1.75}
                   />
-                  {STATUS_META[section.status].label}
+                  {statusLabel(t, section.status)}
                   <span className="qs:text-ink-3 qs:font-normal qs:tabular-nums">
                     {section.items.length}
                   </span>
                   <span className="qs:text-ink-3 qs:ml-1 qs:text-[12px] qs:font-normal">
-                    {STATUS_META[section.status].hint}
+                    {statusHint(t, section.status)}
                   </span>
                 </button>
                 {!folded &&
@@ -125,10 +128,11 @@ function QuestionRow({
   menu: ReactNode;
   extra?: Record<string, unknown>;
 }) {
+  const { t } = useI18n(messages);
   const time =
     question.status === "resolved"
-      ? `${relativeDay(question.resolvedTime ?? question.updatedAt, now)}解答`
-      : relativeDay(question.activityAt, now);
+      ? t("date.resolvedAt", { day: relativeDay(question.resolvedTime ?? question.updatedAt, now, t) })
+      : relativeDay(question.activityAt, now, t);
   return (
     <ContextMenu content={menu}>
       <div
@@ -147,7 +151,7 @@ function QuestionRow({
           trigger={
             <button
               type="button"
-              title="设置状态"
+              title={t("list.setStatusTitle")}
               onClick={e => e.stopPropagation()}
               className="qs:mt-[3px] qs:rounded-full qs:outline-none qs:hover:shadow-[0_0_0_3px_var(--tau-bg-hover)] qs:focus-visible:shadow-[var(--tau-focus-ring)]"
             >
@@ -181,7 +185,7 @@ function QuestionRow({
           align="end"
           trigger={
             <IconButton
-              title="更多"
+              title={t("common.more")}
               onClick={e => e.stopPropagation()}
               className={cx(
                 "qs:size-[22px] qs:shrink-0 qs:rounded-[6px] qs:opacity-0 qs:focus-visible:opacity-100 qs:group-hover/row:opacity-100",

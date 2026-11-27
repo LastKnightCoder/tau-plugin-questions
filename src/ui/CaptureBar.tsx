@@ -4,7 +4,9 @@
  */
 import { useState, type Ref } from "react";
 import { Plus } from "lucide-react";
+import { useI18n } from "@tau/plugins";
 import { toast } from "@tau/ui";
+import { messages } from "../i18n";
 import { matchGroup, parseCapture, type QuestionGroup } from "../data/model";
 import { GroupDot } from "./bits";
 
@@ -20,6 +22,7 @@ export function CaptureBar({
   onSubmit(title: string, group: QuestionGroup | undefined): Promise<void>;
   inputRef?: Ref<HTMLInputElement>;
 }) {
+  const { t } = useI18n(messages);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const parsed = parseCapture(text);
@@ -32,7 +35,7 @@ export function CaptureBar({
       await onSubmit(parsed.title, target);
       setText("");
     } catch {
-      toast.error("收集失败");
+      toast.error(t("toast.captureFailed"));
     } finally {
       setBusy(false);
     }
@@ -60,8 +63,8 @@ export function CaptureBar({
             setText("");
           }
         }}
-        placeholder="记下一个问题… 回车收集，#分组 指定分组"
-        aria-label="快速收集问题"
+        placeholder={t("capture.placeholder")}
+        aria-label={t("capture.aria")}
         className="qs:text-tau-body qs:placeholder:text-ink-3 qs:min-w-0 qs:flex-1 qs:bg-transparent qs:outline-none"
       />
       {target && (

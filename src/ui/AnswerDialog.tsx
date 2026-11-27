@@ -5,13 +5,14 @@
  */
 import { useState } from "react";
 import { FilePlus2, FileText, FolderOpen, Layers } from "lucide-react";
-import { ContentEditor } from "@tau/plugins";
+import { ContentEditor, useI18n } from "@tau/plugins";
 import { Button, Dialog, DialogBody, Input, Menu, toast } from "@tau/ui";
 import { useRuntime } from "../runtime";
+import { messages } from "../i18n";
 import type { QuestionAnswer } from "../data/questions";
 import { MENU_ICON } from "./bits";
 import type { QuestionActions } from "./actions";
-import { relativeDay } from "./model";
+import { kindLabel, relativeDay } from "./model";
 
 const TITLE_LENGTH = 40;
 
@@ -24,7 +25,6 @@ export interface AnswerDialogState {
 }
 
 type TitleTarget = "article" | "document";
-const TARGET_LABEL: Record<TitleTarget, string> = { article: "文章", document: "项目文档" };
 
 export function AnswerDialog({
   state,
@@ -38,6 +38,7 @@ export function AnswerDialog({
   onClose(): void;
 }) {
   const { context, data } = useRuntime();
+  const { t } = useI18n(messages);
   const [closing, setClosing] = useState(false);
   const [titleTarget, setTitleTarget] = useState<TitleTarget | null>(null);
   const [draftTitle, setDraftTitle] = useState("");
@@ -60,7 +61,7 @@ export function AnswerDialog({
       else await data.renameAnswer(state.answer, line.slice(0, TITLE_LENGTH));
       await actions.refresh();
     } catch {
-      toast.error("保存答案失败");
+      toast.error(t("toast.answerSaveFailed"));
     } finally {
       setClosing(false);
       onClose();
@@ -76,7 +77,7 @@ export function AnswerDialog({
     const target = titleTarget;
     const title = draftTitle.trim();
     if (!target || !state) return;
-    if (!title) return void toast.warning(`请输入${TARGET_LABEL[target]}标题`);
+    if (!title) return void toast.warning(t("answerDialog.titleRequired", { kind: kindLabel(t, target) }));
     setTitleTarget(null);
     await actions.shareAnswer(state.answer, target, title);
   };
@@ -89,7 +90,7 @@ export function AnswerDialog({
       onOpenChange={next => {
         if (!next) void close();
       }}
-      title={state?.fresh ? "写答案" : "编辑答案"}
+      title={state?.fresh ? t("answerDialog.write") : t("answerDialog.edit")}
       subtitle={state?.questionTitle}
       locked={closing}
       width={760}
@@ -97,10 +98,10 @@ export function AnswerDialog({
       footer={
         <>
           <span className="qs:text-ink-3 qs:mr-auto qs:text-[12px]">
-            独立答案只属于这个问题，可以随时另存为卡片或文章
+            {t("answerDialog.hint")}
           </span>
           <Button variant="primary" size="sm" loading={closing} onClick={() => void close()}>
-            完成
+            {t("common.done")}
           </Button>
         </>
       }
@@ -109,13 +110,13 @@ export function AnswerDialog({
         <>
           <div className="qs:text-ink-3 qs:flex qs:shrink-0 qs:items-center qs:gap-3.5 qs:px-6 qs:pt-[8px]">
             <span className="qs:min-w-0 qs:flex-1 qs:truncate qs:tabular-nums">
-              {relativeDay(state.answer.entity.createdAt, now)}写下
+              {t("date.written", { day: relativeDay(state.answer.entity.createdAt, now, t) })}
             </span>
             <Menu
               align="end"
               trigger={
                 <Button variant="ghost" size="sm" icon={FilePlus2}>
-                  创建为
+                  {t("answerDialog.createAs")}
                 </Button>
               }
             >
@@ -124,7 +125,7 @@ export function AnswerDialog({
                   icon={<Layers className={MENU_ICON} strokeWidth={1.75} />}
                   onSelect={() => void actions.shareAnswer(state.answer, "card")}
                 >
-                  卡片
+                  {t("answerDialog.asCard")}
                 </Menu.Item>
               )}
               {!projected.has("article") && (
@@ -132,14 +133,14 @@ export function AnswerDialog({
                   icon={<FileText className={MENU_ICON} strokeWidth={1.75} />}
                   onSelect={() => void openTitle("article")}
                 >
-                  文章…
+                  {t("answerDialog.asArticle")}
                 </Menu.Item>
               )}
               <Menu.Item
                 icon={<FolderOpen className={MENU_ICON} strokeWidth={1.75} />}
                 onSelect={() => void openTitle("document")}
               >
-                项目文档…
+                {t("answerDialog.asDocument")}
               </Menu.Item>
             </Menu>
           </div>
@@ -147,7 +148,7 @@ export function AnswerDialog({
             <ContentEditor
               key={state.answer.entity.id}
               contentRef={state.answer.entity.contentRef}
-              placeholder="用自己的话回答这个问题…"
+              placeholder={t("answerDialog.placeholder")}
             />
           </div>
         </>
@@ -155,15 +156,15 @@ export function AnswerDialog({
       <Dialog
         open={titleTarget !== null}
         onOpenChange={next => !next && setTitleTarget(null)}
-        title={`创建${titleTarget ? TARGET_LABEL[titleTarget] : ""}`}
+        title={t("answerDialog.createTitle", { kind: titleTarget ? kindLabel(t, titleTarget) : "" })}
         size="sm"
         footer={
           <>
             <Button variant="secondary" size="sm" onClick={() => setTitleTarget(null)}>
-              取消
+              {t("common.cancel")}
             </Button>
             <Button variant="primary" size="sm" onClick={() => void confirmTitle()}>
-              创建
+              {t("common.create")}
             </Button>
           </>
         }
@@ -171,7 +172,7 @@ export function AnswerDialog({
         <DialogBody>
           <Input
             data-autofocus
-            placeholder="标题"
+            placeholder={t("common.title")}
             value={draftTitle}
             onChange={e => setDraftTitle(e.target.value)}
             onKeyDown={e => {

@@ -119,8 +119,12 @@ export function useSummaryAccess() {
 export interface RefSummary {
   /** 摘要：材料的原文与想法、白板说明 */
   excerpt?: string;
-  /** 次要信息：字数、页数、文档数、出处、消息数等 */
-  meta?: string;
+  /** 次要信息的原始数量与出处；展示文案由 summaryMeta 按语言拼装 */
+  wordCount?: number;
+  pageCount?: number;
+  documentCount?: number;
+  source?: string;
+  chat?: { scene?: "pdf" | "video-note" | "notebook"; messageCount?: number };
   /** 卡片、文章、项目文档的正文，可以预览 */
   contentRef?: string;
   /** 对话能否在停靠栏打开（只有主对话可以） */
@@ -151,8 +155,6 @@ async function readSummary(
   ref: PluginEntityRef
 ): Promise<RefSummary | null> {
   const { data } = context;
-  const words = (count: number) =>
-    count >= 1000 ? `${(count / 1000).toFixed(1)}k 字` : count > 0 ? `${count} 字` : "";
   switch (ref.kind) {
     case "card":
     case "article":
@@ -162,7 +164,7 @@ async function readSummary(
       const item = await reader.get(ref.id);
       if (!item) return null;
       return {
-        meta: ref.kind === "card" ? "" : words(item.wordCount),
+        ...(ref.kind === "card" ? {} : { wordCount: item.wordCount }),
         ...(item.contentRef ? { contentRef: item.contentRef } : {}),
       };
     }
@@ -171,31 +173,26 @@ async function readSummary(
       if (!board) return null;
       return {
         excerpt: board.description,
-        meta: board.pageCount > 1 ? `${board.pageCount} 页` : "",
+        pageCount: board.pageCount,
       };
     }
     case "project": {
       const project = await data.projects.get(ref.id);
-      return project ? { meta: `${project.documentCount} 篇文档` } : null;
+      return project ? { documentCount: project.documentCount } : null;
     }
     case "material": {
       const material = await data.materials.get(ref.id);
       if (!material) return null;
       return {
         excerpt: [material.quote, material.note].filter(Boolean).join(" · "),
-        meta: material.source,
+        source: material.source,
       };
     }
     case "chat-session": {
       const chat = await data.chats.get(ref.id);
       if (!chat) return null;
-      const scene = { main: "", pdf: "PDF 对话", "video-note": "视频笔记对话", notebook: "Notebook 对话" }[
-        chat.scene
-      ];
       return {
-        meta: [scene, chat.messageCount ? `${chat.messageCount} 条消息` : ""]
-          .filter(Boolean)
-          .join(" · "),
+        ...(chat.scene === "main" ? {} : { chat: { scene: chat.scene, messageCount: chat.messageCount } }),
         dockable: chat.scene === "main",
       };
     }

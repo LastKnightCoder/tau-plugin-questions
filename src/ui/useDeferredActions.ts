@@ -6,12 +6,17 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@tau/ui";
+import { useI18n } from "@tau/plugins";
+import { messages } from "../i18n";
 
 const UNDO_MS = 5000;
 
 export function useDeferredActions() {
+  const { t } = useI18n(messages);
   const [pending, setPending] = useState<ReadonlySet<string>>(() => new Set());
   const commits = useRef(new Map<string, () => Promise<unknown>>());
+  const tRef = useRef(t);
+  tRef.current = t;
 
   const drop = (key: string) =>
     setPending(prev => {
@@ -25,7 +30,7 @@ export function useDeferredActions() {
     if (!run) return;
     commits.current.delete(key);
     run()
-      .catch(() => toast.error("操作失败"))
+      .catch(() => toast.error(tRef.current("toast.actionFailed")))
       .finally(() => drop(key));
   };
   const commitRef = useRef(commit);
@@ -45,7 +50,7 @@ export function useDeferredActions() {
       duration: UNDO_MS,
       onClose: () => commitRef.current(key),
       action: {
-        label: "撤销",
+        label: t("toast.undo"),
         onClick: () => {
           // 撤销先于 onClose 触发：摘掉待落库的操作后，随后的 onClose 不再执行
           if (!commits.current.has(key)) return;

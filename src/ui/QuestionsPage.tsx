@@ -9,9 +9,10 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { ArrowRightLeft, FlaskConical, Layers, Link2, PenLine, Plus, Trash2 } from "lucide-react";
-import type { PluginLink, PluginPageProps } from "@tau/plugins";
+import { useI18n, type PluginLink, type PluginPageProps } from "@tau/plugins";
 import { Button, Loading, Menu, isEditableTarget, toast } from "@tau/ui";
 import { useRuntime } from "../runtime";
+import { messages } from "../i18n";
 import { ANSWER_ROLE, CHAT_ROLE, type Question, type QuestionStatus } from "../data/model";
 import { questionActions } from "./actions";
 import { AnswerDialog, type AnswerDialogState } from "./AnswerDialog";
@@ -24,10 +25,11 @@ import { QuestionList } from "./QuestionList";
 import {
   QUESTION_DRAG,
   SECTION_ORDER,
-  STATUS_META,
   STATUS_STEPS,
+  kindLabel,
   sectionize,
   statusCounts,
+  statusLabel,
 } from "./model";
 import {
   detailKey,
@@ -43,6 +45,7 @@ const param = (value: unknown) => (typeof value === "string" && value ? value : 
 export function QuestionsPage({ params, pageContext }: PluginPageProps) {
   const runtime = useRuntime();
   const { context, data } = runtime;
+  const { t } = useI18n(messages);
   const actions = useMemo(() => questionActions(runtime), [runtime]);
   const snapshotQuery = useQuestionsSnapshot();
   const snapshot = snapshotQuery.data;
@@ -146,18 +149,18 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
     try {
       const { eventId } = await data.setStatus(question.id, status);
       await actions.refresh();
-      toast.success(`已标为「${STATUS_META[status].label}」`, {
+      toast.success(t("toast.statusSet", { label: statusLabel(t, status) }), {
         action: {
-          label: "撤销",
+          label: t("toast.undo"),
           onClick: () =>
             void data
               .setStatus(question.id, previous, eventId ? { revertEventId: eventId } : {})
               .then(actions.refresh)
-              .catch(() => toast.error("撤销失败")),
+              .catch(() => toast.error(t("toast.undoFailed"))),
         },
       });
     } catch {
-      toast.error("修改状态失败");
+      toast.error(t("toast.statusSetFailed"));
     }
   };
 
@@ -166,13 +169,13 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
       .moveToGroup(question.id, groupId)
       .then(async () => {
         await actions.refresh();
-        toast.success(`已移到「${derived?.groupMap.get(groupId)?.title ?? ""}」`);
+        toast.success(t("sidebar.toast.moved", { title: derived?.groupMap.get(groupId)?.title ?? "" }));
       })
-      .catch(() => toast.error("移动失败"));
+      .catch(() => toast.error(t("toast.moveFailed")));
   };
 
   const remove = (question: Question) =>
-    deferred.schedule(`q:${question.id}`, "已删除问题（材料本身不受影响）", async () => {
+    deferred.schedule(`q:${question.id}`, t("toast.removed"), async () => {
       await data.deleteQuestion(question.id);
       await actions.refresh();
     });
@@ -183,10 +186,10 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
     const answer =
       link.role === ANSWER_ROLE ? detail.answers.find(item => item.link.id === link.id) : undefined;
     const message = answer
-      ? "已删除答案"
+      ? t("toast.answerRemoved")
       : link.role === CHAT_ROLE
-        ? "已解除关联（对话仍保留）"
-        : "已解除关联（材料仍保留在库中）";
+        ? t("toast.chatUnlinked")
+        : t("toast.materialUnlinked");
     deferred.schedule(`l:${link.id}`, message, async () => {
       if (answer) await data.deleteAnswer(questionId, answer);
       else await data.unlink(questionId, link, title);
@@ -203,7 +206,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
       if (answer)
         setAnswerDialog({ questionId: question.id, questionTitle: question.title, answer, fresh: true });
     } catch {
-      toast.error("新建答案失败");
+      toast.error(t("toast.answerCreateFailed"));
     }
   };
 
@@ -217,7 +220,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
       next.delete("not_started");
       return next;
     });
-    toast.success(`已收集到「${group?.title ?? "未分类"}」`);
+    toast.success(t("toast.captured", { group: group?.title ?? "" }));
   };
 
   /** 菜单里对非当前问题的操作要用它的详情：先选中，再从缓存或重新读取 */
@@ -232,14 +235,14 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
 
   const renderStatusMenu = (question: Question) => (
     <>
-      <Menu.Group>状态</Menu.Group>
+      <Menu.Group>{t("menu.status")}</Menu.Group>
       {STATUS_STEPS.map(status => (
         <Menu.Item
           key={status}
           icon={<StatusRing status={status} size="sm" />}
           onSelect={() => void setStatus(question, status)}
         >
-          {STATUS_META[status].label}
+          {statusLabel(t, status)}
         </Menu.Item>
       ))}
     </>
@@ -254,7 +257,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
           void actions.writeCard(question);
         }}
       >
-        写一张卡片
+        {t("menu.writeCard")}
       </Menu.Item>
       <Menu.Item
         icon={<PenLine className={MENU_ICON} strokeWidth={1.75} />}
@@ -263,7 +266,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
           void writeAnswer(question);
         }}
       >
-        写答案
+        {t("menu.writeAnswer")}
       </Menu.Item>
       <Menu.Item
         icon={<Link2 className={MENU_ICON} strokeWidth={1.75} />}
@@ -273,21 +276,21 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
           void actions.linkExisting(question);
         }}
       >
-        关联已有材料…
+        {t("menu.linkExisting")}
       </Menu.Item>
       <Menu.Item
         icon={<FlaskConical className={MENU_ICON} strokeWidth={1.75} />}
         onSelect={() => void withDetail(question, actions.upgrade)}
       >
-        以此立项…
+        {t("menu.upgrade")}
       </Menu.Item>
       <Menu.Separator />
-      <Menu.Submenu label="状态" icon={<StatusRing status={question.status} size="sm" />}>
+      <Menu.Submenu label={t("menu.status")} icon={<StatusRing status={question.status} size="sm" />}>
         {renderStatusMenu(question)}
       </Menu.Submenu>
       {(snapshot?.groups.length ?? 0) > 1 && (
         <Menu.Submenu
-          label="移动到"
+          label={t("menu.moveTo")}
           icon={<ArrowRightLeft className={MENU_ICON} strokeWidth={1.75} />}
         >
           {snapshot!.groups
@@ -305,7 +308,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
         icon={<Trash2 className={MENU_ICON} strokeWidth={1.75} />}
         onSelect={() => remove(question)}
       >
-        删除问题
+        {t("menu.delete")}
       </Menu.Item>
     </>
   );
@@ -350,7 +353,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
   if (snapshotQuery.isError)
     return (
       <div className="qs:text-ink-3 qs:grid qs:h-full qs:place-items-center qs:text-[13px]">
-        问题数据读取失败
+        {t("error.loadFailed")}
       </div>
     );
   if (!snapshot || !derived) return <Loading />;
@@ -372,13 +375,13 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
         <div className="qs:flex qs:flex-none qs:flex-col qs:px-8 qs:pt-5">
           <div className="qs:mb-3 qs:flex qs:h-10 qs:flex-none qs:items-center qs:gap-3">
             <h1 className="qs:text-tau-title-lg qs:shrink-0 qs:whitespace-nowrap qs:font-semibold qs:tracking-[-0.01em]">
-              {filterTitle ?? "问题"}
+              {filterTitle ?? t("page.title")}
             </h1>
             <span className="qs:text-ink-2 qs:text-tau-meta qs:w-0 qs:flex-1 qs:truncate qs:whitespace-nowrap qs:tabular-nums">
               {SECTION_ORDER.map((status, i) => (
                 <span key={status}>
                   {i > 0 && " · "}
-                  {STATUS_META[status].label}{" "}
+                  {statusLabel(t, status)}{" "}
                   <b className="qs:text-ink-1 qs:font-semibold">{derived.counts[status]}</b>
                 </span>
               ))}
@@ -390,7 +393,7 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
               className="qs:shrink-0 qs:whitespace-nowrap"
               onClick={() => captureRef.current?.focus()}
             >
-              新建问题
+              {t("action.newQuestion")}
             </Button>
           </div>
           <CaptureBar
@@ -430,17 +433,15 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
               })}
               empty={
                 <p className="qs:text-ink-3 qs:py-10 qs:text-center qs:text-[12.5px]">
-                  {groupFilter == null
-                    ? "还没有问题。学习时冒出的疑问，在上面记下来。"
-                    : "这个分组还没有问题。"}
+                  {groupFilter == null ? t("empty.all") : t("empty.group")}
                 </p>
               }
             />
             <div className="qs:text-ink-3 qs:flex qs:flex-none qs:flex-wrap qs:gap-3 qs:px-2.5 qs:pt-2 qs:text-[11.5px]">
-              <KeyHint keys={["↑", "↓"]} label="切换" />
-              <KeyHint keys={["1", "2", "3"]} label="设状态" />
-              <KeyHint keys={["L"]} label="关联材料" />
-              <KeyHint keys={["Esc"]} label="关闭详情" />
+              <KeyHint keys={["↑", "↓"]} label={t("hint.switch")} />
+              <KeyHint keys={["1", "2", "3"]} label={t("hint.setStatus")} />
+              <KeyHint keys={["L"]} label={t("hint.link")} />
+              <KeyHint keys={["Esc"]} label={t("hint.close")} />
             </div>
           </div>
 
@@ -480,12 +481,12 @@ export function QuestionsPage({ params, pageContext }: PluginPageProps) {
           if (editingGroup) {
             await data.updateGroup(editingGroup.id, { title, tone });
             await actions.refresh();
-            toast.success("分组已更新");
+            toast.success(t("toast.groupUpdated"));
           } else {
             const created = await data.createGroup({ title, tone });
             await actions.refresh();
             createdGroup.current = created.id;
-            toast.success(`已创建分组「${title}」`);
+            toast.success(t("toast.groupCreated", { title }));
           }
         }}
       />

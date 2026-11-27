@@ -14,37 +14,70 @@ import {
   ScrollText,
   type LucideIcon,
 } from "lucide-react";
-import type { PluginSidebarTone } from "@tau/plugins";
+import type { PluginSidebarTone, TranslationValues } from "@tau/plugins";
 import type { CompositionKind, Question, QuestionEvent, QuestionStatus } from "../data/model";
+import zhCN from "../locales/zh-CN.json";
+import { messages } from "../i18n";
+
+/** 词典 key；组件内由 useI18n 提供翻译，非 React 模块用 context.i18n */
+export type MessageKey = Parameters<typeof messages.ref>[0];
+export type Translate = (key: MessageKey, values?: TranslationValues) => string;
+
+/** 回退语言（zh-CN）直出的翻译：AI 数据与协议输出保留中文时使用 */
+export const zhT: Translate = (key, values) => {
+  let text = (zhCN as Record<string, string>)[key as string] ?? key;
+  for (const [name, value] of Object.entries(values ?? {}))
+    text = text.replaceAll(`{{${name}}}`, String(value));
+  return text;
+};
+
+/** AI 数据与协议输出里的类型名：发给 AI 或进入持久化协议的文案保留中文 */
+export const KIND_LABEL_ZH: Record<CompositionKind, string> = {
+  card: "卡片",
+  article: "文章",
+  document: "项目文档",
+  project: "项目",
+  whiteboard: "白板",
+  answer: "独立答案",
+  excerpt: "划线",
+  "pdf-annotation": "PDF 标注",
+  "web-clip": "剪藏",
+  "chat-session": "对话",
+};
 
 export const DAY_MS = 86_400_000;
 
 /** 列表行拖到侧边栏分组上移动问题（context.sidebar.dragType 的局部 ID） */
 export const QUESTION_DRAG = "question";
 
-export const STATUS_META: Record<QuestionStatus, { label: string; hint: string }> = {
-  in_progress: { label: "探究中", hint: "正在积累材料" },
-  not_started: { label: "待探究", hint: "收集来还没动" },
-  resolved: { label: "已解答", hint: "已有答案" },
+export const STATUS_META: Record<QuestionStatus, { key: MessageKey; hintKey: MessageKey }> = {
+  in_progress: { key: "status.in_progress", hintKey: "status.in_progress.hint" },
+  not_started: { key: "status.not_started", hintKey: "status.not_started.hint" },
+  resolved: { key: "status.resolved", hintKey: "status.resolved.hint" },
 };
+
+export const statusLabel = (t: Translate, status: QuestionStatus) => t(STATUS_META[status].key);
+export const statusHint = (t: Translate, status: QuestionStatus) => t(STATUS_META[status].hintKey);
 
 /** 列表分段顺序：正在做的在最前 */
 export const SECTION_ORDER: QuestionStatus[] = ["in_progress", "not_started", "resolved"];
 /** 状态条 / 数字键 1-3 的顺序：按学习阶段 */
 export const STATUS_STEPS: QuestionStatus[] = ["not_started", "in_progress", "resolved"];
 
-export const TARGET_META: Record<CompositionKind, { label: string; icon: LucideIcon }> = {
-  card: { label: "卡片", icon: Layers },
-  article: { label: "文章", icon: FileText },
-  document: { label: "项目文档", icon: File },
-  project: { label: "项目", icon: FolderKanban },
-  whiteboard: { label: "白板", icon: Presentation },
-  answer: { label: "独立答案", icon: PenLine },
-  excerpt: { label: "划线", icon: Highlighter },
-  "pdf-annotation": { label: "PDF 标注", icon: ScrollText },
-  "web-clip": { label: "剪藏", icon: Globe },
-  "chat-session": { label: "对话", icon: MessageCircle },
+export const TARGET_META: Record<CompositionKind, { key: MessageKey; icon: LucideIcon }> = {
+  card: { key: "kind.card", icon: Layers },
+  article: { key: "kind.article", icon: FileText },
+  document: { key: "kind.document", icon: File },
+  project: { key: "kind.project", icon: FolderKanban },
+  whiteboard: { key: "kind.whiteboard", icon: Presentation },
+  answer: { key: "kind.answer", icon: PenLine },
+  excerpt: { key: "kind.excerpt", icon: Highlighter },
+  "pdf-annotation": { key: "kind.pdfAnnotation", icon: ScrollText },
+  "web-clip": { key: "kind.webClip", icon: Globe },
+  "chat-session": { key: "kind.chat", icon: MessageCircle },
 };
+
+export const kindLabel = (t: Translate, kind: CompositionKind) => t(TARGET_META[kind].key);
 
 /** 构成计数的展示顺序 */
 export const COMPOSITION_ORDER: CompositionKind[] = [
@@ -103,14 +136,15 @@ export function startOfDay(ts: number): number {
 }
 
 /** 今天 / 昨天 / N 天前 / M月D日 */
-export function relativeDay(ts: number, now: number): string {
+export function relativeDay(ts: number, now: number, t: Translate): string {
   const diff = Math.round((startOfDay(now) - startOfDay(ts)) / DAY_MS);
-  if (diff <= 0) return "今天";
-  if (diff === 1) return "昨天";
-  if (diff < 7) return `${diff} 天前`;
+  if (diff <= 0) return t("date.today");
+  if (diff === 1) return t("date.yesterday");
+  if (diff < 7) return t("date.daysAgo", { count: diff });
   const d = new Date(ts);
   const sameYear = d.getFullYear() === new Date(now).getFullYear();
-  return `${sameYear ? "" : `${d.getFullYear()}年`}${d.getMonth() + 1}月${d.getDate()}日`;
+  const values = { year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate() };
+  return sameYear ? t("date.monthDay", values) : t("date.monthDayYear", values);
 }
 
 export function clock(ts: number): string {
@@ -123,18 +157,20 @@ export function daySpan(from: number, to: number): number {
   return Math.max(1, Math.round((startOfDay(to) - startOfDay(from)) / DAY_MS) + 1);
 }
 
-export function formatWords(words: number): string {
+export function formatWords(words: number, t: Translate): string {
   if (words <= 0) return "";
-  return words >= 1000 ? `${(words / 1000).toFixed(1)}k 字` : `${words} 字`;
+  return words >= 1000
+    ? t("words.k", { value: (words / 1000).toFixed(1) })
+    : t("words.count", { count: words });
 }
 
-const CREATED_VERB: Partial<Record<CompositionKind, string>> = {
-  card: "写下卡片",
-  article: "写了文章",
-  document: "写了项目文档",
-  project: "新建项目",
-  whiteboard: "画了白板",
-  answer: "写下结论",
+const CREATED_VERB: Partial<Record<CompositionKind, MessageKey>> = {
+  card: "event.created.card",
+  article: "event.created.article",
+  document: "event.created.document",
+  project: "event.created.project",
+  whiteboard: "event.created.whiteboard",
+  answer: "event.created.answer",
 };
 
 export interface EventView {
@@ -147,16 +183,18 @@ export interface EventView {
   estimated: boolean;
 }
 
-export function describeEvent(event: QuestionEvent): EventView {
+export function describeEvent(event: QuestionEvent, t: Translate): EventView {
   const estimated = "estimated" in event && Boolean(event.estimated);
   switch (event.type) {
     case "create":
-      return { tone: "start", verb: "提出问题", estimated };
+      return { tone: "start", verb: t("event.create"), estimated };
     case "status":
-      if (event.to === "resolved") return { tone: "done", verb: "标为已解答", estimated };
+      if (event.to === "resolved") return { tone: "done", verb: t("event.markedResolved"), estimated };
       return {
         tone: "plain",
-        verb: event.auto ? "挂上第一份材料，进入探究中" : `改为「${STATUS_META[event.to].label}」`,
+        verb: event.auto
+          ? t("event.statusAuto")
+          : t("event.statusChanged", { label: statusLabel(t, event.to) }),
         estimated,
       };
     case "link":
@@ -164,8 +202,8 @@ export function describeEvent(event: QuestionEvent): EventView {
         tone: event.created ? "made" : "plain",
         verb:
           event.created && CREATED_VERB[event.target]
-            ? CREATED_VERB[event.target]!
-            : `关联${TARGET_META[event.target].label}`,
+            ? t(CREATED_VERB[event.target]!)
+            : t("event.linked", { kind: kindLabel(t, event.target) }),
         target: event.target,
         title: event.title,
         estimated,
@@ -173,7 +211,7 @@ export function describeEvent(event: QuestionEvent): EventView {
     case "unlink":
       return {
         tone: "muted",
-        verb: `移除${TARGET_META[event.target].label}`,
+        verb: t("event.unlinked", { kind: kindLabel(t, event.target) }),
         target: event.target,
         title: event.title,
         estimated,
@@ -188,12 +226,57 @@ export function trajectoryStats(
   question: Pick<Question, "status" | "createdAt" | "resolvedTime">,
   materials: number,
   events: readonly QuestionEvent[],
-  now: number
+  now: number,
+  t: Translate
 ): string {
   const days = daySpan(question.createdAt, question.resolvedTime ?? now);
   const notes = events.filter(e => e.type === "note").length;
-  const head = question.status === "resolved" ? `用时 ${days} 天` : `第 ${days} 天`;
-  return `${head} · ${materials} 份材料 · ${notes} 条记录`;
+  const values = {
+    days,
+    materials: t("stats.materials", { count: materials }),
+    notes: t("stats.notes", { count: notes }),
+  };
+  return question.status === "resolved" ? t("stats.resolved", values) : t("stats.active", values);
+}
+
+/** 摘要的原始数据；展示文案由 summaryMeta 按语言拼装 */
+export interface SummaryFields {
+  excerpt?: string;
+  contentRef?: string;
+  dockable?: boolean;
+  source?: string;
+  wordCount?: number;
+  pageCount?: number;
+  documentCount?: number;
+  chat?: { scene?: "pdf" | "video-note" | "notebook"; messageCount?: number };
+}
+
+/** 摘要的次要信息段（字数、页数、文档数、消息数），在渲染时按当前语言拼装 */
+export function summaryMeta(t: Translate, summary: SummaryFields | undefined): string {
+  if (!summary) return "";
+  if (summary.wordCount != null && summary.wordCount > 0)
+    return summary.wordCount >= 1000
+      ? t("words.k", { value: (summary.wordCount / 1000).toFixed(1) })
+      : t("words.count", { count: summary.wordCount });
+  if (summary.pageCount != null && summary.pageCount > 1)
+    return t("summary.pages", { count: summary.pageCount });
+  if (summary.documentCount != null) return t("summary.documents", { count: summary.documentCount });
+  if (summary.chat) {
+    // 对话场景按宿主协议值记录（video-note），词典 key 用驼峰
+    const sceneKey = summary.chat.scene === "pdf"
+      ? "summary.scene.pdf"
+      : summary.chat.scene === "video-note"
+        ? "summary.scene.videoNote"
+        : summary.chat.scene === "notebook"
+          ? "summary.scene.notebook"
+          : null;
+    const scene = sceneKey ? t(sceneKey) : "";
+    const count = summary.chat.messageCount
+      ? t("summary.messages", { count: summary.chat.messageCount })
+      : "";
+    return [scene, count].filter(Boolean).join(" · ");
+  }
+  return summary.source ?? "";
 }
 
 /** 拼接类名；插件的 Tailwind 类都带 qs: 前缀，不经 @tau/ui 的 cn 合并 */

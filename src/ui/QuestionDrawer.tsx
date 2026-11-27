@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import {
   ContentEditor,
+  useI18n,
   type PluginEntityDescription,
   type PluginEntityRef,
   type PluginLink,
@@ -31,19 +32,30 @@ import {
 } from "@tau/plugins";
 import { Button, Drawer, IconButton, Loading, Menu, toast, useRetainedValue } from "@tau/ui";
 import { useRuntime } from "../runtime";
+import { messages } from "../i18n";
 import { compositionOf, type Composition as Counts, type Question, type QuestionGroup, type QuestionStatus } from "../data/model";
 import type { QuestionAnswer } from "../data/questions";
 import type { CreatableKind, QuestionActions } from "./actions";
 import { Composition, GroupDot, Hint, MENU_ICON, SectionTitle, StatusRing } from "./bits";
 import { RefRow } from "./RefRow";
 import { Trajectory } from "./Trajectory";
-import { STATUS_META, STATUS_STEPS, TARGET_META, cx, relativeDay, trajectoryStats } from "./model";
+import {
+  STATUS_STEPS,
+  TARGET_META,
+  cx,
+  kindLabel,
+  relativeDay,
+  statusLabel,
+  summaryMeta,
+  trajectoryStats,
+} from "./model";
 import {
   refKey,
   useDescriptions,
   useSummaries,
   useSummaryAccess,
   type QuestionDetail,
+  type RefSummary,
 } from "./queries";
 
 export function QuestionDrawer({
@@ -81,6 +93,7 @@ export function QuestionDrawer({
   renderMenu(question: Question): ReactNode;
   onClose(): void;
 }) {
+  const { t } = useI18n(messages);
   useEffect(() => {
     if (!open) return;
     const registration = pageContext.registerDismiss(onClose);
@@ -98,7 +111,7 @@ export function QuestionDrawer({
       open={open}
       onOpenChange={next => !next && onClose()}
       size="md"
-      label="问题详情"
+      label={t("drawer.label")}
       className="qs:top-0"
       title={question && <TitleEditor key={question.id} question={question} />}
       subtitle={
@@ -111,12 +124,12 @@ export function QuestionDrawer({
                   className="qs:text-ink-2 qs:hover:bg-hover qs:-ml-1 qs:flex qs:h-[22px] qs:items-center qs:gap-1.5 qs:rounded-[6px] qs:px-1 qs:outline-none qs:focus-visible:shadow-[var(--tau-focus-ring)]"
                 >
                   <GroupDot tone={group?.tone} />
-                  {group?.title ?? "未分组"}
+                  {group?.title ?? t("group.ungrouped")}
                   <ChevronDown className="qs:text-ink-3 qs:size-3" strokeWidth={1.75} />
                 </button>
               }
             >
-              <Menu.Group>移动到分组</Menu.Group>
+              <Menu.Group>{t("drawer.moveToGroup")}</Menu.Group>
               {groups.map(g => (
                 <Menu.Item
                   key={g.id}
@@ -127,7 +140,7 @@ export function QuestionDrawer({
                 </Menu.Item>
               ))}
             </Menu>
-            <span>{relativeDay(question.createdAt, now)}提出</span>
+            <span>{t("date.asked", { day: relativeDay(question.createdAt, now, t) })}</span>
           </span>
         )
       }
@@ -136,7 +149,7 @@ export function QuestionDrawer({
           <Menu
             align="end"
             trigger={
-              <IconButton title="更多">
+              <IconButton title={t("common.more")}>
                 <MoreHorizontal className="qs:size-[15px]" strokeWidth={1.75} />
               </IconButton>
             }
@@ -187,6 +200,7 @@ function DetailBody({
   onEditAnswer(answer: QuestionAnswer): void;
   onWriteAnswer(): void;
 }) {
+  const { t } = useI18n(messages);
   const { question, events } = detail;
   const materials = detail.materials.filter(link => !hidden.has(link.id));
   const chats = detail.chats.filter(link => !hidden.has(link.id));
@@ -215,7 +229,7 @@ function DetailBody({
 
   return (
     <>
-      <div role="radiogroup" aria-label="状态" className="qs:grid qs:grid-cols-3 qs:gap-1">
+      <div role="radiogroup" aria-label={t("menu.status")} className="qs:grid qs:grid-cols-3 qs:gap-1">
         {STATUS_STEPS.map((status, idx) => {
           const on = question.status === status;
           return (
@@ -224,7 +238,7 @@ function DetailBody({
               type="button"
               role="radio"
               aria-checked={on}
-              title={`${STATUS_META[status].label}（${idx + 1}）`}
+              title={t("drawer.statusHotkey", { label: statusLabel(t, status), index: idx + 1 })}
               onClick={() => !on && onSetStatus(status)}
               className={cx(
                 "qs:ease-tau-out qs:flex qs:h-8 qs:items-center qs:gap-[7px] qs:rounded-[9px] qs:border qs:px-2.5 qs:text-[12.5px] qs:outline-none qs:transition-[background,color,border-color] qs:duration-150 qs:focus-visible:shadow-[var(--tau-focus-ring)]",
@@ -236,7 +250,7 @@ function DetailBody({
               )}
             >
               <StatusRing status={status} size="sm" />
-              {STATUS_META[status].label}
+              {statusLabel(t, status)}
             </button>
           );
         })}
@@ -250,17 +264,19 @@ function DetailBody({
         >
           <FlaskConical className="qs:size-[14px] qs:shrink-0" strokeWidth={1.75} />
           <span className="qs:min-w-0 qs:truncate">
-            {notebookTitle ? `已立项 · Notebook「${notebookTitle}」` : "已立项 · Notebook 已删除"}
+            {notebookTitle
+              ? t("drawer.notebookLinked", { title: notebookTitle })
+              : t("drawer.notebookDeleted")}
           </span>
         </button>
       )}
 
-      <SectionTitle>背景</SectionTitle>
+      <SectionTitle>{t("drawer.background")}</SectionTitle>
       <div className="qs:border-line-1 qs:focus-within:border-ink-3 qs:min-h-16 qs:rounded-[10px] qs:border qs:px-3 qs:py-1.5 qs:transition-[border-color] qs:duration-150">
         <ContentEditor
           contentRef={question.contentRef}
           kit="compact"
-          placeholder="问题背景：在哪里遇到的、已经知道什么、卡在哪一步…"
+          placeholder={t("drawer.backgroundPlaceholder")}
         />
       </div>
 
@@ -272,11 +288,11 @@ function DetailBody({
             icon={answers.length ? Plus : PenLine}
             onClick={onWriteAnswer}
           >
-            {answers.length ? "再写一段" : "写答案"}
+            {answers.length ? t("drawer.writeAnother") : t("drawer.writeAnswer")}
           </Button>
         }
       >
-        我的答案
+        {t("drawer.answers")}
       </SectionTitle>
       {answers.length ? (
         <div className="qs:flex qs:flex-col qs:gap-1.5">
@@ -284,17 +300,19 @@ function DetailBody({
             <RefRow
               key={answer.link.id}
               icon={TARGET_META.answer.icon}
-              title={answer.entity.title || "未命名答案"}
+              title={answer.entity.title || t("answer.untitled")}
               meta={[
-                TARGET_META.answer.label,
-                relativeDay(answer.entity.updatedAt, now),
-                ...answer.meta.projections.map(ref => `也是${TARGET_META[compositionOf(ref) ?? "card"].label}`),
+                kindLabel(t, "answer"),
+                relativeDay(answer.entity.updatedAt, now, t),
+                ...answer.meta.projections.map(ref =>
+                  t("answer.alsoKind", { kind: kindLabel(t, compositionOf(ref) ?? "card") })
+                ),
               ].join(" · ")}
               onClick={() => onEditAnswer(answer)}
               actions={[
-                { title: "编辑", icon: PenLine, onClick: () => onEditAnswer(answer) },
+                { title: t("common.edit"), icon: PenLine, onClick: () => onEditAnswer(answer) },
                 {
-                  title: "删除答案",
+                  title: t("answer.delete"),
                   icon: Unlink,
                   onClick: () => onUnlink(answer.link, answer.entity.title),
                 },
@@ -305,10 +323,10 @@ function DetailBody({
       ) : (
         <Hint>
           {question.status === "resolved"
-            ? "已标为解答，但还没有用自己的话写下结论。"
+            ? t("drawer.hintResolved")
             : materials.length >= 2
-              ? `已经积累了 ${materials.length} 份材料。试着不看材料，用自己的话写下答案——写不出来的地方，就是还没弄懂的地方。`
-              : "材料够了，就用自己的话把答案写下来。"}
+              ? t("drawer.hintMaterials", { count: materials.length })
+              : t("drawer.hintEmpty")}
         </Hint>
       )}
 
@@ -317,7 +335,7 @@ function DetailBody({
           <span className="qs:flex qs:items-center qs:gap-2">
             {refs.length > 0 && !access.granted && (
               <Button variant="ghost" size="sm" icon={Eye} onClick={() => void access.request()}>
-                显示摘要
+                {t("drawer.showSummaries")}
               </Button>
             )}
             <Composition counts={counts} />
@@ -325,7 +343,7 @@ function DetailBody({
         }
         count={materials.length || undefined}
       >
-        探究材料
+        {t("drawer.materials")}
       </SectionTitle>
       {materials.length ? (
         <div className="qs:flex qs:flex-col qs:gap-1.5">
@@ -343,13 +361,11 @@ function DetailBody({
           ))}
         </div>
       ) : (
-        <Hint icon>
-          从这里开始探究：读到什么、想到什么，写成一张卡片挂上来；或者关联已有的卡片、文章、划线、对话。
-        </Hint>
+        <Hint icon>{t("drawer.materialsEmpty")}</Hint>
       )}
       {chats.length > 0 && (
         <>
-          <SectionTitle count={chats.length}>探究对话</SectionTitle>
+          <SectionTitle count={chats.length}>{t("drawer.chats")}</SectionTitle>
           <div className="qs:flex qs:flex-col qs:gap-1.5">
             {chats.map(link => (
               <ChatRow
@@ -367,17 +383,17 @@ function DetailBody({
       )}
       <div className="qs:mt-2.5 qs:flex qs:flex-wrap qs:gap-1.5">
         <Button variant="secondary" size="sm" icon={Layers} onClick={() => void actions.writeCard(question)}>
-          写一张卡片
+          {t("menu.writeCard")}
         </Button>
         <Menu
           trigger={
             <Button variant="secondary" size="sm" icon={Plus}>
-              新建
+              {t("drawer.create")}
               <ChevronDown className="qs:size-3" strokeWidth={1.75} />
             </Button>
           }
         >
-          <Menu.Group>新建并挂到这个问题</Menu.Group>
+          <Menu.Group>{t("drawer.createMenu")}</Menu.Group>
           {(
             [
               ["article", FileText],
@@ -390,19 +406,19 @@ function DetailBody({
               icon={<Icon className={MENU_ICON} strokeWidth={1.75} />}
               onSelect={() => void actions.createMaterial(question, kind)}
             >
-              {TARGET_META[kind].label}
+              {kindLabel(t, kind)}
             </Menu.Item>
           ))}
           <Menu.Separator />
           <Menu.Item icon={<PenLine className={MENU_ICON} strokeWidth={1.75} />} onSelect={onWriteAnswer}>
-            独立答案
+            {t("kind.answer")}
           </Menu.Item>
         </Menu>
         <Button variant="secondary" size="sm" icon={MessageCircle} onClick={() => void actions.discuss(detail)}>
-          围绕它聊
+          {t("drawer.discuss")}
         </Button>
         <Button variant="secondary" size="sm" icon={Link2} onClick={() => void actions.linkExisting(question)}>
-          关联已有
+          {t("drawer.linkExisting")}
           <kbd className="qs:bg-hover qs:text-ink-2 qs:ml-0.5 qs:rounded-[4px] qs:px-1 qs:font-mono qs:text-[10px]">
             L
           </kbd>
@@ -412,11 +428,17 @@ function DetailBody({
       <SectionTitle
         action={
           <span className="qs:text-ink-3 qs:text-[11.5px] qs:font-normal">
-            {trajectoryStats(question, materials.length + chats.length + answers.length, events, now)}
+            {trajectoryStats(
+              question,
+              materials.length + chats.length + answers.length,
+              events,
+              now,
+              t
+            )}
           </span>
         }
       >
-        探究轨迹
+        {t("drawer.trajectory")}
       </SectionTitle>
       <TrajectoryWithNotes detail={detail} descriptions={descriptions} now={now} actions={actions} />
     </>
@@ -476,25 +498,31 @@ function MaterialRow({
   onPreview(link: PluginLink, contentRef: string, title: string): void;
   onUnlink(link: PluginLink, title: string | undefined): void;
 }) {
+  const { t } = useI18n(messages);
   const kind = compositionOf(link.to) ?? "card";
   const meta = TARGET_META[kind];
+  const label = kindLabel(t, kind);
   const missing = description?.status === "missing";
-  const title = description?.status === "ok" ? description.title || `无标题${meta.label}` : meta.label;
-  const info = [meta.label, summary?.meta, `${relativeDay(link.createdAt, now)}关联`]
+  const title = description?.status === "ok" ? description.title || t("ref.untitledKind", { kind: label }) : label;
+  const info = [
+    label,
+    summaryMeta(t, summary),
+    t("date.linked", { day: relativeDay(link.createdAt, now, t) }),
+  ]
     .filter(Boolean)
     .join(" · ");
   const openIt = () => void actions.open(link.to);
   return (
     <RefRow
       icon={meta.icon}
-      title={missing ? `${meta.label}已删除` : title}
+      title={missing ? t("ref.kindDeleted", { kind: label }) : title}
       excerpt={summary?.excerpt}
-      meta={missing ? "原内容已不存在，可解除关联" : info}
+      meta={missing ? t("ref.missingHint") : info}
       missing={missing}
       onClick={summary?.contentRef ? () => onPreview(link, summary.contentRef!, title) : openIt}
       actions={[
-        ...(missing ? [] : [{ title: `打开${meta.label}`, icon: ExternalLink, onClick: openIt }]),
-        { title: "解除关联", icon: Unlink, onClick: () => onUnlink(link, title) },
+        ...(missing ? [] : [{ title: t("ref.openKind", { kind: label }), icon: ExternalLink, onClick: openIt }]),
+        { title: t("ref.unlink"), icon: Unlink, onClick: () => onUnlink(link, title) },
       ]}
     />
   );
@@ -510,17 +538,19 @@ function ChatRow({
 }: {
   link: PluginLink;
   description: PluginEntityDescription | undefined;
-  summary: { meta?: string; dockable?: boolean } | undefined;
+  summary: RefSummary | undefined;
   now: number;
   actions: QuestionActions;
   onUnlink(link: PluginLink, title: string | undefined): void;
 }) {
+  const { t } = useI18n(messages);
   const missing = description?.status === "missing";
-  const title = description?.status === "ok" ? description.title || "未命名对话" : "对话";
+  const title =
+    description?.status === "ok" ? description.title || t("chat.untitled") : t("kind.chat");
   const info = [
-    link.data.initiated === true ? "由此发起" : "",
-    summary?.meta,
-    `${relativeDay(link.createdAt, now)}关联`,
+    link.data.initiated === true ? t("chat.initiatedHere") : "",
+    summaryMeta(t, summary),
+    t("date.linked", { day: relativeDay(link.createdAt, now, t) }),
   ]
     .filter(Boolean)
     .join(" · ");
@@ -529,22 +559,22 @@ function ChatRow({
   return (
     <RefRow
       icon={MessageCircle}
-      title={missing ? "对话已删除" : title}
-      meta={missing ? "原对话已不存在，可解除关联" : info}
+      title={missing ? t("chat.deleted") : title}
+      meta={missing ? t("chat.missingHint") : info}
       missing={missing}
       onClick={dockable ? () => void actions.open(link.to, "dock") : undefined}
       actions={[
         ...(missing || !dockable
           ? []
           : [
-              { title: "在侧栏打开", icon: PanelRight, onClick: () => void actions.open(link.to, "dock") },
+              { title: t("chat.openDock"), icon: PanelRight, onClick: () => void actions.open(link.to, "dock") },
               {
-                title: messageIds.length ? "在对话页打开（定位到转出问题的消息）" : "在对话页打开",
+                title: messageIds.length ? t("chat.openAtMessage") : t("chat.open"),
                 icon: ExternalLink,
                 onClick: () => void actions.open(link.to),
               },
             ]),
-        { title: "解除关联", icon: Unlink, onClick: () => onUnlink(link, title) },
+        { title: t("ref.unlink"), icon: Unlink, onClick: () => onUnlink(link, title) },
       ]}
     />
   );
@@ -552,6 +582,7 @@ function ChatRow({
 
 /** 标题即改即存：失焦或回车提交，Esc 放弃 */
 function TitleEditor({ question }: { question: Question }) {
+  const { t } = useI18n(messages);
   const { data, queryClient } = useRuntime();
   const ref = useRef<HTMLTextAreaElement>(null);
   const [text, setText] = useState(question.title);
@@ -570,7 +601,7 @@ function TitleEditor({ question }: { question: Question }) {
     data
       .renameQuestion(question.id, next)
       .then(() => queryClient.invalidateQueries({ queryKey: ["questions"] }))
-      .catch(() => toast.error("保存标题失败"));
+      .catch(() => toast.error(t("toast.titleSaveFailed")));
   };
 
   return (
@@ -579,7 +610,7 @@ function TitleEditor({ question }: { question: Question }) {
       rows={1}
       value={text}
       spellCheck={false}
-      aria-label="问题"
+      aria-label={t("page.title")}
       onChange={e => setText(e.target.value.replace(/\n/g, ""))}
       onBlur={commit}
       onKeyDown={e => {

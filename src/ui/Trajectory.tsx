@@ -6,8 +6,10 @@
  */
 import { useState } from "react";
 import { NotebookPen } from "lucide-react";
+import { useI18n } from "@tau/plugins";
 import { toast } from "@tau/ui";
 import type { PluginEntityDescription, PluginEntityRef } from "@tau/plugins";
+import { messages } from "../i18n";
 import type { QuestionEvent } from "../data/model";
 import {
   TARGET_META,
@@ -17,6 +19,7 @@ import {
   describeEvent,
   relativeDay,
   type EventView,
+  type Translate,
 } from "./model";
 import { refKey } from "./queries";
 
@@ -43,6 +46,7 @@ export function Trajectory({
   onOpen(ref: PluginEntityRef): void;
   onAddNote(text: string): Promise<void>;
 }) {
+  const { t } = useI18n(messages);
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -54,7 +58,7 @@ export function Trajectory({
       await onAddNote(value);
       setText("");
     } catch {
-      toast.error("记录失败");
+      toast.error(t("toast.noteFailed"));
     } finally {
       setBusy(false);
     }
@@ -66,7 +70,7 @@ export function Trajectory({
     <>
       <ol className="qs:flex qs:flex-col">
         {events.map(event => {
-          const view = describeEvent(event);
+          const view = describeEvent(event, t);
           const ref = event.type === "link" || event.type === "unlink" ? event.ref : undefined;
           const current = ref ? descriptions?.get(refKey(ref)) : undefined;
           const title = (current?.status === "ok" && current.title) || view.title;
@@ -103,9 +107,9 @@ export function Trajectory({
                 <EventRef target={view.target} title={title} muted={view.tone === "muted"} onClick={open} />
               )}
               <div className="qs:text-ink-3 qs:mt-1 qs:text-[11px] qs:tabular-nums">
-                {when(event.createdAt, view.estimated, now)}
+                {when(event.createdAt, view.estimated, now, t)}
                 {origin != null && event.createdAt > origin && (
-                  <> · 第 {daySpan(origin, event.createdAt)} 天</>
+                  <> · {t("event.dayN", { count: daySpan(origin, event.createdAt) })}</>
                 )}
               </div>
             </li>
@@ -125,8 +129,8 @@ export function Trajectory({
               void submit();
             }
           }}
-          placeholder="记一笔：读到了什么、卡在哪、换了什么思路…"
-          aria-label="记一笔"
+          placeholder={t("trajectory.notePlaceholder")}
+          aria-label={t("trajectory.noteAria")}
           className="qs:text-ink-1 qs:placeholder:text-ink-3 qs:min-w-0 qs:flex-1 qs:bg-transparent qs:text-[12.5px] qs:outline-none"
         />
       </label>
@@ -135,9 +139,9 @@ export function Trajectory({
 }
 
 /** 「今天 12:15」「7月18日 12:15」；推算时间只到日期：「约 7月18日」 */
-function when(ts: number, estimated: boolean, now: number): string {
-  const day = relativeDay(ts, now);
-  return estimated ? `约 ${day}` : `${day} ${clock(ts)}`;
+function when(ts: number, estimated: boolean, now: number, t: Translate): string {
+  const day = relativeDay(ts, now, t);
+  return estimated ? t("date.approx", { day }) : `${day} ${clock(ts)}`;
 }
 
 function EventRef({

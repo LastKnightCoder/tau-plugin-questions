@@ -8,12 +8,13 @@ import {
   compositionOf,
   GROUP_TONES,
   QUESTION_STATUSES,
+  type CompositionKind,
   type Question,
   type QuestionGroup,
   type QuestionStatus,
 } from "../data/model";
 import type { QuestionData } from "../data/questions";
-import { TARGET_META, describeEvent } from "../ui/model";
+import { KIND_LABEL_ZH, describeEvent, zhT } from "../ui/model";
 
 export const MCP_ID = "questions";
 export const RENDER_VERSION = 1;
@@ -100,7 +101,7 @@ export function createQuestionTools(data: QuestionData, context: ToolContext): P
     groupId: question.groupId,
     materials: Object.fromEntries(
       Object.entries(question.composition).map(([kind, count]) => [
-        TARGET_META[kind as keyof typeof TARGET_META]?.label ?? kind,
+        KIND_LABEL_ZH[kind as CompositionKind] ?? kind,
         count,
       ])
     ),
@@ -193,7 +194,7 @@ export function createQuestionTools(data: QuestionData, context: ToolContext): P
           ...summary(question, groups),
           background: clip(background?.markdown ?? "", BACKGROUND_MAX),
           materials: materials.map((link, index) => ({
-            type: TARGET_META[compositionOf(link.to) ?? "card"].label,
+            type: KIND_LABEL_ZH[compositionOf(link.to) ?? "card"],
             ref: link.to,
             title: titleOf(index),
           })),
@@ -208,7 +209,7 @@ export function createQuestionTools(data: QuestionData, context: ToolContext): P
           })),
           notebook: notebook ? notebook.to : null,
           recentEvents: events.slice(-RECENT_EVENTS).map(event => {
-            const view = describeEvent(event);
+            const view = describeEvent(event, zhT);
             return {
               at: iso(event.createdAt),
               text:

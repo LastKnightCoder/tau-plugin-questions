@@ -2,9 +2,10 @@
  * 聊天里问题工具的结果：问题行（状态环 + 标题 + 分组），点开进问题页并选中。
  * 失败、进行中或不认识的版本交给默认展示。
  */
-import type { PluginPageHandle, PluginSidebarTone, PluginToolRendererProps } from "@tau/plugins";
+import { useI18n, type PluginPageHandle, type PluginSidebarTone, type PluginToolRendererProps } from "@tau/plugins";
+import { messages } from "../i18n";
 import { GroupDot, StatusRing } from "../ui/bits";
-import { STATUS_META } from "../ui/model";
+import { statusLabel } from "../ui/model";
 import { RENDER_VERSION, type QuestionsRender } from "./tools";
 
 const MAX_ROWS = 8;
@@ -16,11 +17,14 @@ export function createToolResult(page: PluginPageHandle) {
     dataVersion,
     renderDefault,
   }: PluginToolRendererProps) {
+    const { t } = useI18n(messages);
     const questions = (data as QuestionsRender | null)?.questions;
     if (execution.status !== "success" || dataVersion !== RENDER_VERSION || !Array.isArray(questions))
       return renderDefault();
     if (!questions.length)
-      return <div className="qs:text-ink-3 qs:px-1 qs:py-1 qs:text-[12.5px]">没有符合条件的问题</div>;
+      return (
+        <div className="qs:text-ink-3 qs:px-1 qs:py-1 qs:text-[12.5px]">{t("tool.noResults")}</div>
+      );
     return (
       <div className="qs:flex qs:flex-col">
         {questions.slice(0, MAX_ROWS).map(question => (
@@ -40,14 +44,14 @@ export function createToolResult(page: PluginPageHandle) {
                     {question.groupTitle}
                   </span>
                 )}
-                {STATUS_META[question.status]?.label}
+                {statusLabel(t, question.status)}
               </span>
             </span>
           </button>
         ))}
         {questions.length > MAX_ROWS && (
           <div className="qs:text-ink-3 qs:px-2 qs:pt-1 qs:text-[11.5px]">
-            另有 {questions.length - MAX_ROWS} 个问题
+            {t("tool.more", { count: questions.length - MAX_ROWS })}
           </div>
         )}
       </div>

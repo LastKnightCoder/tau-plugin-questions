@@ -3,19 +3,21 @@
  */
 import { useEffect, useState } from "react";
 import { Check } from "lucide-react";
-import type { PluginSidebarTone } from "@tau/plugins";
+import { useI18n, type PluginSidebarTone } from "@tau/plugins";
 import { Button, Dialog, DialogBody, Input, toast } from "@tau/ui";
+import { messages } from "../i18n";
+import type { MessageKey } from "./model";
 import { GROUP_TONES, type QuestionGroup } from "../data/model";
 import { TONE_DOT, cx } from "./model";
 
-const TONE_LABEL: Record<PluginSidebarTone, string> = {
-  rose: "玫红",
-  orange: "橙",
-  yellow: "黄",
-  green: "绿",
-  blue: "蓝",
-  purple: "紫",
-  gray: "灰",
+const TONE_KEY: Record<PluginSidebarTone, MessageKey> = {
+  rose: "color.rose",
+  orange: "color.orange",
+  yellow: "color.yellow",
+  green: "color.green",
+  blue: "color.blue",
+  purple: "color.purple",
+  gray: "color.gray",
 };
 
 export function GroupDialog({
@@ -30,6 +32,7 @@ export function GroupDialog({
   onClose(): void;
   onSubmit(title: string, tone: PluginSidebarTone): Promise<void>;
 }) {
+  const { t } = useI18n(messages);
   const [title, setTitle] = useState("");
   const [tone, setTone] = useState<PluginSidebarTone>("blue");
   const [busy, setBusy] = useState(false);
@@ -41,13 +44,13 @@ export function GroupDialog({
 
   const submit = async () => {
     const name = title.trim();
-    if (!name) return void toast.warning("请输入分组名称");
+    if (!name) return void toast.warning(t("groupDialog.nameRequired"));
     setBusy(true);
     try {
       await onSubmit(name, tone);
       onClose();
     } catch (error) {
-      toast.error(error instanceof Error && error.message ? error.message : "保存分组失败");
+      toast.error(error instanceof Error && error.message ? error.message : t("groupDialog.saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -57,16 +60,16 @@ export function GroupDialog({
     <Dialog
       open={open}
       onOpenChange={next => !next && onClose()}
-      title={group ? "编辑分组" : "新建分组"}
+      title={group ? t("groupDialog.edit") : t("groupDialog.create")}
       size="sm"
       locked={busy}
       footer={
         <>
           <Button variant="secondary" size="sm" onClick={onClose}>
-            取消
+            {t("common.cancel")}
           </Button>
           <Button variant="primary" size="sm" loading={busy} onClick={() => void submit()}>
-            {group ? "保存" : "创建"}
+            {group ? t("common.save") : t("common.create")}
           </Button>
         </>
       }
@@ -74,7 +77,7 @@ export function GroupDialog({
       <DialogBody>
         <Input
           data-autofocus
-          placeholder="例如：编辑器原理"
+          placeholder={t("groupDialog.placeholder")}
           value={title}
           disabled={group?.isDefault}
           onChange={e => setTitle(e.target.value)}
@@ -85,14 +88,14 @@ export function GroupDialog({
             }
           }}
         />
-        <div role="radiogroup" aria-label="颜色" className="qs:mt-3 qs:flex qs:gap-2">
+        <div role="radiogroup" aria-label={t("groupDialog.color")} className="qs:mt-3 qs:flex qs:gap-2">
           {GROUP_TONES.map(item => (
             <button
               key={item}
               type="button"
               role="radio"
               aria-checked={tone === item}
-              title={TONE_LABEL[item]}
+              title={t(TONE_KEY[item])}
               onClick={() => setTone(item)}
               className={cx(
                 "qs:text-ink-inverse qs:grid qs:size-6 qs:place-items-center qs:rounded-full qs:outline-none qs:focus-visible:shadow-[var(--tau-focus-ring)]",

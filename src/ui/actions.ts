@@ -6,10 +6,10 @@ import { PluginPermissionError, type PluginEntityRef } from "@tau/plugins";
 import { toast } from "@tau/ui";
 import type { QuestionsRuntime } from "../runtime";
 import { QUESTIONS_KEY } from "../runtime";
-import { compositionOf, type Question } from "../data/model";
+import { compositionOf, type CompositionKind, type Question } from "../data/model";
 import type { QuestionAnswer } from "../data/questions";
 import type { QuestionDetail } from "./queries";
-import { TARGET_META } from "./model";
+import { kindLabel, type Translate } from "./model";
 
 /** 「关联已有」可选的类型：我的笔记在前，外部材料与对话在后 */
 const PICK_KINDS = [
@@ -28,14 +28,28 @@ const MAX_CHAT_CONTEXT = 20;
 const MAX_SEED_MATERIALS = 30;
 const MAX_BACKGROUND = 600;
 
-const failure = (error: unknown, fallback: string) => {
+/** 发起对话时种子消息里的类型名：这段提示词随对话发给 AI，保留中文 */
+const PROMPT_KIND_LABEL: Record<CompositionKind, string> = {
+  card: "卡片",
+  article: "文章",
+  document: "项目文档",
+  project: "项目",
+  whiteboard: "白板",
+  answer: "独立答案",
+  excerpt: "划线",
+  "pdf-annotation": "PDF 标注",
+  "web-clip": "剪藏",
+  "chat-session": "对话",
+};
+
+const failure = (t: Translate, error: unknown, fallback: string) => {
   if (error instanceof PluginPermissionError)
     toast.error(
       error.reason === "blocked"
-        ? "权限已被阻止，可在插件详情页解除"
+        ? t("error.permissionBlocked")
         : error.reason === "unavailable"
-          ? "请回到 Tau 后在插件详情页处理权限请求"
-          : "没有获得所需的权限"
+          ? t("error.permissionUnavailable")
+          : t("error.permissionDenied")
     );
   else toast.error(error instanceof Error && error.message ? error.message : fallback);
 };
@@ -44,6 +58,9 @@ const clip = (text: string, max = 40) => (text.length > max ? `${text.slice(0, m
 
 export function questionActions(runtime: QuestionsRuntime) {
   const { context, data, queryClient } = runtime;
+  const t = context.i18n.t;
+  const failureWith = (error: unknown, fallback: string) => failure(t, error, fallback);
+  const kindLabelOf = (kind: CompositionKind) => kindLabel(t, kind);
   const refresh = () => queryClient.invalidateQueries({ queryKey: QUESTIONS_KEY });
 
   const titleOf = async (ref: PluginEntityRef) => {
@@ -55,7 +72,7 @@ export function questionActions(runtime: QuestionsRuntime) {
     try {
       await context.app.open(ref, placement ? { placement } : undefined);
     } catch (error) {
-      failure(error, "打开失败");
+      failureWith(error, t("toast.openFailed"));
     }
   }
 
@@ -64,7 +81,7 @@ export function questionActions(runtime: QuestionsRuntime) {
       const picked = await context.app.pick({
         kinds: PICK_KINDS,
         multiple: true,
-        title: "关联已有材料",
+        title: t("toast.pickTitle"),
       });
       if (!picked.length) return;
       const chats = picked.filter(item => item.ref.kind === "chat-session");
@@ -78,9 +95,9 @@ export function questionActions(runtime: QuestionsRuntime) {
       for (const chat of chats)
         if (await data.linkChat(question.id, chat.ref.id, { title: chat.title })) added++;
       await refresh();
-      toast.success(added ? `已关联 ${added} 份材料` : "这些材料已经关联过了");
+      toast.success(added ? t("toast.linked", { count: added }) : t("toast.alreadyLinked"));
     } catch (error) {
-      failure(error, "关联失败");
+      failureWith(error, t("toast.linkFailed"));
     }
   }
 
@@ -92,7 +109,7 @@ export function questionActions(runtime: QuestionsRuntime) {
       await data.linkMaterials(question.id, [{ ref, created: true, title: await titleOf(ref) }]);
       await refresh();
     } catch (error) {
-      failure(error, "卡片已保存，但挂到问题上失败");
+      failureWith(error, t("toast.cardLinkFailed"));
     }
   }
 
@@ -111,7 +128,7 @@ export function questionActions(runtime: QuestionsRuntime) {
       await refresh();
       await open(ref);
     } catch (error) {
-      failure(error, `新建${TARGET_META[kind].label}失败`);
+      failureWith(error, t("toast.createFailed", { kind: kindLabelOf(kind) }));
     }
   }
 
@@ -125,7 +142,7 @@ export function questionActions(runtime: QuestionsRuntime) {
         : [];
       const live = described.flatMap(item =>
         item.status === "ok"
-          ? [`- ${TARGET_META[compositionOf(item.ref) ?? "card"].label} · ${item.title}`]
+          ? [`- ${PROMPT_KIND_LABEL[compositionOf(item.ref) ?? "card"]} · ${item.title}`]
           : []
       );
       const lines = [
@@ -149,7 +166,7 @@ export function questionActions(runtime: QuestionsRuntime) {
       await data.linkChat(question.id, chat.id, { initiated: true });
       await refresh();
     } catch (error) {
-      failure(error, "发起对话失败");
+      failureWith(error, t("toast.discussFailed"));
     }
   }
 
@@ -171,7 +188,7 @@ export function questionActions(runtime: QuestionsRuntime) {
       await refresh();
       await open(notebook);
     } catch (error) {
-      failure(error, "立项失败");
+      failureWith(error, t("toast.upgradeFailed"));
     }
   }
 
@@ -199,9 +216,9 @@ export function questionActions(runtime: QuestionsRuntime) {
       if (!ref) return;
       await data.addProjection(answer.entity.id, ref);
       await refresh();
-      toast.success(`已创建${TARGET_META[target].label}`);
+      toast.success(t("toast.createdKind", { kind: kindLabelOf(target) }));
     } catch (error) {
-      failure(error, `创建${TARGET_META[target].label}失败`);
+      failureWith(error, t("toast.createKindFailed", { kind: kindLabelOf(target) }));
     }
   }
 

@@ -1,6 +1,7 @@
 import { CircleHelp, PenLine } from "lucide-react";
 import { definePlugin, type PluginPageProps } from "@tau/plugins";
 import { registerQuestionSchema } from "./data/schema";
+import { messages } from "./i18n";
 import { createRuntime, RuntimeProvider } from "./runtime";
 import { createQuestionTools, MCP_ID, ROW_TOOLS } from "./ai/tools";
 import { createToolResult } from "./ai/ToolResult";
@@ -14,6 +15,7 @@ export const QUESTIONS_PAGE = "questions";
 
 export default definePlugin({
   ...__PLUGIN_META__,
+  i18n: messages,
   create: () => ({
     async activate(context) {
       const runtime = createRuntime(context);
@@ -24,7 +26,7 @@ export default definePlugin({
       });
       const page = context.pages.register({
         id: QUESTIONS_PAGE,
-        title: "问题",
+        title: messages.ref("page.title"),
         component: (props: PluginPageProps) => (
           <RuntimeProvider runtime={runtime}>
             <QuestionsPage {...props} />
@@ -35,7 +37,7 @@ export default definePlugin({
       registerQuestionsSidebar(runtime, page);
       context.home.registerPanel({
         id: "active",
-        title: "探究中的问题",
+        title: messages.ref("home.title"),
         component: () => (
           <RuntimeProvider runtime={runtime}>
             <HomePanel />

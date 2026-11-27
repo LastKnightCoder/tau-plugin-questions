@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { QueryClient } from "@tanstack/react-query";
 import type { PluginSidebarItemUpdate } from "@tau/plugins";
+import zhCN from "../locales/zh-CN.json";
 import { createQuestionData } from "../data/questions";
 import { registerQuestionSchema } from "../data/schema";
 import type { QuestionsRuntime } from "../runtime";
@@ -10,6 +11,14 @@ import { createMemoryStore } from "./memory-store";
 vi.mock("@tau/ui", () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 const Icon = () => null;
+
+/** 回退词典直出的翻译：按 zh-CN 词典取句并替换插值，替代宿主注入的 Translator */
+const zhT = (key: string, values?: Record<string, string | number | boolean>) => {
+  let text = (zhCN as Record<string, string>)[key] ?? key;
+  for (const [name, value] of Object.entries(values ?? {}))
+    text = text.replaceAll(`{{${name}}}`, String(value));
+  return text;
+};
 
 describe("侧边栏", () => {
   let updates: PluginSidebarItemUpdate[];
@@ -24,6 +33,7 @@ describe("侧边栏", () => {
     const memory = createMemoryStore();
     registerQuestionSchema(memory.store, { page: "questions", questionIcon: Icon, answerIcon: Icon });
     const context = {
+      i18n: { t: zhT },
       sidebar: {
         registerItem: () => ({ update: (patch: PluginSidebarItemUpdate) => updates.push(patch) }),
       },

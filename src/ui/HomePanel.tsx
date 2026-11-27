@@ -3,6 +3,8 @@
  */
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight } from "lucide-react";
+import { useI18n } from "@tau/plugins";
+import { messages } from "../i18n";
 import { QUESTIONS_KEY, useRuntime } from "../runtime";
 import type { ActiveQuestion } from "../data/questions";
 import { Composition, GroupDot, StatusRing } from "./bits";
@@ -12,6 +14,7 @@ const LIMIT = 6;
 
 export function HomePanel() {
   const { data, pages } = useRuntime();
+  const { t } = useI18n(messages);
   const query = useQuery({
     queryKey: [...QUESTIONS_KEY, "active", LIMIT],
     queryFn: () => data.listActive(LIMIT),
@@ -40,7 +43,7 @@ export function HomePanel() {
         </div>
       ) : (
         <p className="qs:text-ink-3 qs:px-2.5 qs:py-2 qs:text-[12.5px]">
-          没有正在探究的问题。学习时冒出的疑问，记到问题页里。
+          {t("home.empty")}
         </p>
       )}
       <button
@@ -48,7 +51,7 @@ export function HomePanel() {
         onClick={() => void pages.questions?.open()}
         className="qs:text-ink-3 qs:hover:text-ink-1 qs:mt-1 qs:inline-flex qs:items-center qs:gap-0.5 qs:rounded-[6px] qs:px-2.5 qs:py-1 qs:text-[12px] qs:outline-none qs:focus-visible:shadow-[var(--tau-focus-ring)]"
       >
-        前往问题
+        {t("home.open")}
         <ChevronRight className="qs:size-[13px]" strokeWidth={1.75} />
       </button>
     </div>
@@ -64,8 +67,9 @@ function QuestionRow({
   now: number;
   onClick(): void;
 }) {
+  const { t } = useI18n(messages);
   const { question, group, lastEvent } = item;
-  const progress = lastEvent ? describeEvent(lastEvent) : null;
+  const progress = lastEvent ? describeEvent(lastEvent, t) : null;
   const progressText = progress
     ? progress.tone === "note"
       ? progress.text
@@ -89,7 +93,7 @@ function QuestionRow({
           )}
           <Composition counts={question.composition} className="qs:shrink-0" />
           <span className="qs:min-w-0 qs:truncate">
-            {relativeDay(question.activityAt, now)}
+            {relativeDay(question.activityAt, now, t)}
             {progressText ? ` · ${progressText}` : ""}
           </span>
         </span>

@@ -3,10 +3,11 @@
  * 需要读取权限（摘要获准后才有正文引用），其余类型直接打开。
  */
 import { ExternalLink } from "lucide-react";
-import { ContentEditor, type PluginLink } from "@tau/plugins";
+import { ContentEditor, useI18n, type PluginLink } from "@tau/plugins";
 import { Button, Dialog } from "@tau/ui";
+import { messages } from "../i18n";
 import { compositionOf } from "../data/model";
-import { TARGET_META } from "./model";
+import { kindLabel } from "./model";
 
 export interface MaterialPreviewState {
   link: PluginLink;
@@ -23,7 +24,8 @@ export function MaterialPreview({
   onClose(): void;
   onOpen(link: PluginLink): void;
 }) {
-  const label = state ? TARGET_META[compositionOf(state.link.to) ?? "card"].label : "";
+  const { t } = useI18n(messages);
+  const label = state ? kindLabel(t, compositionOf(state.link.to) ?? "card") : "";
   return (
     <Dialog
       open={state !== null}
@@ -43,7 +45,7 @@ export function MaterialPreview({
               onOpen(state.link);
             }}
           >
-            打开{label}
+            {t("ref.openKind", { kind: label })}
           </Button>
         )
       }

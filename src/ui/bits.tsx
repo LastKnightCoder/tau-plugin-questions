@@ -4,7 +4,8 @@
  */
 import type { ReactNode } from "react";
 import { Check, Lightbulb } from "lucide-react";
-import type { PluginSidebarTone } from "@tau/plugins";
+import { useI18n, type PluginSidebarTone } from "@tau/plugins";
+import { messages } from "../i18n";
 import type { Composition as CompositionCounts, QuestionStatus } from "../data/model";
 import { COMPOSITION_ORDER, STATUS_META, TARGET_META, TONE_DOT, cx } from "./model";
 
@@ -17,9 +18,10 @@ export function StatusRing({
   size?: "sm" | "md";
   className?: string;
 }) {
+  const { t } = useI18n(messages);
   return (
     <span
-      aria-label={STATUS_META[status].label}
+      aria-label={t(STATUS_META[status].key)}
       className={cx(
         "qs:inline-grid qs:shrink-0 qs:place-items-center qs:rounded-full",
         size === "md" ? "qs:size-4" : "qs:size-[13px]",
@@ -54,6 +56,7 @@ export function Composition({
   counts: CompositionCounts;
   className?: string;
 }) {
+  const { t } = useI18n(messages);
   const entries = COMPOSITION_ORDER.filter(type => counts[type]);
   if (!entries.length) return null;
   return (
@@ -63,7 +66,7 @@ export function Composition({
         return (
           <span
             key={type}
-            title={`${TARGET_META[type].label} ${counts[type]}`}
+            title={t("kind.countTitle", { kind: t(TARGET_META[type].key), count: counts[type] ?? 0 })}
             className="qs:text-ink-3 qs:inline-flex qs:items-center qs:gap-[3px] qs:text-[11.5px] qs:tabular-nums"
           >
             <Icon className="qs:size-3" strokeWidth={1.75} />

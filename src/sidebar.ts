@@ -7,6 +7,7 @@
 import { CircleHelp } from "lucide-react";
 import { SIDEBAR_GROUPS, type PluginPageHandle } from "@tau/plugins";
 import { toast } from "@tau/ui";
+import { messages } from "./i18n";
 import type { QuestionsRuntime } from "./runtime";
 import { QUESTIONS_KEY } from "./runtime";
 import { QUESTION_DRAG } from "./ui/model";
@@ -15,9 +16,10 @@ const REFRESH_DELAY = 200;
 
 export function registerQuestionsSidebar(runtime: QuestionsRuntime, page: PluginPageHandle) {
   const { context, data, queryClient } = runtime;
+  const t = context.i18n.t;
   const item = context.sidebar.registerItem({
     id: "questions",
-    title: "问题管理",
+    title: messages.ref("sidebar.title"),
     icon: CircleHelp,
     group: SIDEBAR_GROUPS.learning,
     page,
@@ -40,17 +42,20 @@ export function registerQuestionsSidebar(runtime: QuestionsRuntime, page: Plugin
         tone: group.tone,
         count: open.get(group.id) ?? 0,
         menu: [
-          { title: "编辑分组", run: () => page.open({ groupId: group.id, editGroup: group.id }) },
+          { title: t("sidebar.menu.editGroup"), run: () => page.open({ groupId: group.id, editGroup: group.id }) },
           ...(group.isDefault
             ? []
             : [
                 {
-                  title: "删除分组",
+                  title: t("sidebar.menu.deleteGroup"),
                   danger: true,
                   run: async () => {
                     await data.deleteGroup(group.id);
                     await refreshPage();
-                    toast.success(`已删除分组「${group.title}」，其中的问题移到「未分类」`);
+                    const target = groups.find(candidate => candidate.isDefault)?.title ?? "";
+                    toast.success(
+                      t("sidebar.toast.groupDeleted", { title: group.title, target })
+                    );
                   },
                 },
               ]),
@@ -62,11 +67,11 @@ export function registerQuestionsSidebar(runtime: QuestionsRuntime, page: Plugin
             if (!question || question.groupId === group.id) return;
             await data.moveToGroup(questionId, group.id);
             await refreshPage();
-            toast.success(`已移到「${group.title}」`);
+            toast.success(t("sidebar.toast.moved", { title: group.title }));
           },
         },
       })),
-      action: { title: "新建分组", run: () => page.open({ createGroup: true }) },
+      action: { title: t("groupDialog.create"), run: () => page.open({ createGroup: true }) },
     });
   }
 
