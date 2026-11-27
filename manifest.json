@@ -4,6 +4,19 @@
   "description": "把读书、写作和对话里冒出来的疑问记下来，挂上卡片、文章、划线等材料慢慢探究，直到写下答案。",
   "categories": ["page"],
   "keywords": ["问题", "疑问", "探究", "学习"],
+  "locales": ["zh-CN", "zh-TW", "en-US"],
+  "i18n": {
+    "zh-TW": {
+      "name": "問題管理",
+      "description": "把讀書、寫作和對話裡冒出來的疑問記下來，掛上卡片、文章、劃線等材料慢慢探究，直到寫下答案。",
+      "keywords": ["問題", "疑問", "探究", "學習"]
+    },
+    "en-US": {
+      "name": "Questions",
+      "description": "Capture questions that come up while reading, writing, or chatting, link cards, articles, and highlights to explore them, and write down your answers.",
+      "keywords": ["questions", "inquiry", "exploration", "learning"]
+    }
+  },
   "permissions": [
     "cards:read",
     "cards:write",
@@ -17,10 +30,10 @@
     "materials:read",
     "chats:read"
   ],
-  "version": "0.1.7",
+  "version": "0.1.8",
   "targets": {
     "desktop": {
-      "minAppVersion": "0.59.4"
+      "minAppVersion": "0.68.0"
     }
   }
 }
