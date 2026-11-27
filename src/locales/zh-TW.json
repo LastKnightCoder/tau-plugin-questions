@@ -108,7 +108,7 @@
   "drawer.discuss": "圍繞它聊",
   "drawer.linkExisting": "關聯已有",
   "drawer.trajectory": "探究軌跡",
-  "drawer.hintResolved": "已標為解答，但還沒有自己的話寫下結論。",
+  "drawer.hintResolved": "已標為解答，但還沒有用自己的話寫下結論。",
   "drawer.hintMaterials": "已經累積了 {{count}} 份材料。試著不看材料，用自己的話寫下答案——寫不出來的地方，就是還沒弄懂的地方。",
   "drawer.hintEmpty": "材料夠了，就用自己的話把答案寫下來。",
   "answer.untitled": "未命名答案",
